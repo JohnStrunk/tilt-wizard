@@ -1,18 +1,42 @@
 #include <iostream>
+#include <ostream>
 
-#include "EMStat.h"
+#include <cstdio>
+#define DIRECTINPUT_VERSION 0x0800
+#include <dinput.h>
+#include <Windows.h>
 
-int
-main(int argc, char *argv[])
+BOOL
+DevEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
 {
-        std::cout << "Hello" << std::endl;
+    std::cout << "device" << std::endl;
+    return DIENUM_CONTINUE;
+}
 
-        EMStat s(0.95);
-        s.set(0, 0);
-        for (unsigned i=0; i<20; ++i) {
-                std::cout << s.avg() << " "
-                          << s.var() << " "
-                          << s.stdev() << std::endl;
-                s.insert(0);
-        }
+//int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,
+//                    LPSTR lpCmdLine, int nShowCmd)
+int main(int argc, char *argv[])
+{
+    HINSTANCE hInst = GetModuleHandle(0);
+    if (!hInst) {
+        std::cout << "Failed to get module handle" << std::endl;
+        return 1;
+    }
+
+    LPDIRECTINPUT8 idi = 0;
+    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
+                                     IID_IDirectInput8, (LPVOID*)&idi, 0);
+    if (res != DI_OK || !idi) {
+        std::cout << "Failed to get interface to DirectInput" << std::endl;
+        return 1;
+    }
+
+    // Enumerate devices
+    int dummy;
+    res = idi->EnumDevices(DI8DEVCLASS_GAMECTRL, DevEnumCb, &dummy, DIEDFL_ATTACHEDONLY);
+    if (res != DI_OK) {
+        std::cout << "Error: " << res << std::endl;
+    }
+
+    return 0;
 }

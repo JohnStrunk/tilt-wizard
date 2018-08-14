@@ -2,14 +2,15 @@ CCFLAGS= -Wall -Werror -ggdb
 
 SOURCES= EMStat.cc tilt-wizard.cc
 OBJECTS= $(SOURCES:.cc=.o)
+LIBS= -ldinput8 -ldxguid
 
 .PHONY: clean
 
 tilt-wizard.exe: $(OBJECTS)
-	g++ -static -o $@ $(CCFLAGS) $^
+	g++ -static -o $@ $(CCFLAGS) $^ -mconsole $(LIBS)
 
 %.o: %.cc
 	g++ $(CCFLAGS) -c $^
 
 clean:
-	rm -f $(OBJECTS) tilt-wizard
+	del $(OBJECTS) tilt-wizard

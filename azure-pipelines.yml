@@ -4,13 +4,14 @@
 # https://aka.ms/yaml
 
 pool:
-  vmImage: 'vs2015-win2012r2'
+  vmImage: 'win1803'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
-
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  - script: |
+      choco install mingw
+    displayName: 'Install build tools'
+    
+  - script: |
+      set PATH=%PATH%;C:\tools\mingw64\bin
+      mingw32-make -j
+    displayName: 'Build'

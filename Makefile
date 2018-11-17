@@ -2,7 +2,7 @@ CCFLAGS= -Wall -Werror -ggdb
 
 SOURCES= EMStat.cc tilt-wizard.cc
 OBJECTS= $(SOURCES:.cc=.o)
-LIBS= -ldinput8 -ldxguid
+LIBS= -ldinput8 -ldxguid -lole32
 
 .PHONY: clean
 

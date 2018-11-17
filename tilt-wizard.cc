@@ -16,24 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cassert>
+#include <cstdio>
+#include <iomanip>
 #include <iostream>
 #include <ostream>
+#include <string>
 
-#include <cstdio>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 #include <Windows.h>
 
 BOOL
-DevEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
+devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
 {
-    std::cout << "device" << std::endl;
+    wchar_t guid[100];
+    assert(0 != StringFromGUID2(lpddi->guidInstance, guid, 100));
+    std::wcout << guid << "    " << lpddi->tszInstanceName << std::endl;
     return DIENUM_CONTINUE;
 }
 
-//int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance,
-//                    LPSTR lpCmdLine, int nShowCmd)
-int main(int argc, char *argv[])
+int
+enumerateDevices()
 {
     HINSTANCE hInst = GetModuleHandle(0);
     if (!hInst) {
@@ -46,15 +50,46 @@ int main(int argc, char *argv[])
                                      IID_IDirectInput8, (LPVOID*)&idi, 0);
     if (res != DI_OK || !idi) {
         std::cout << "Failed to get interface to DirectInput" << std::endl;
-        return 1;
+        return res;
     }
 
     // Enumerate devices
+    std::cout << std::setw(42) << std::left << "Device GUID"
+               << "Name" << std::endl;
+    std::cout << std::setw(70) << std::setfill('=') << "=" << std::endl;
     int dummy;
-    res = idi->EnumDevices(DI8DEVCLASS_GAMECTRL, DevEnumCb, &dummy, DIEDFL_ATTACHEDONLY);
+    res = idi->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb, &dummy,
+                           DIEDFL_ATTACHEDONLY);
     if (res != DI_OK) {
-        std::cout << "Error: " << res << std::endl;
+        std::cout << "Error enumerating devices: " << res << std::endl;
     }
 
-    return 0;
+    return res;
+}
+
+
+void
+usage(std::string pname)
+{
+    std::cout << pname << " [device_uuid]" << std::endl
+              << std::endl
+              << "device_uuid  uuid of device to auto-calibrate" << std::endl;
+}
+
+
+int main(int argc, char *argv[])
+{
+    // No arguments, so just enumerate the DirectInput devices we find.
+    if (argc < 2) {
+        return enumerateDevices();
+    }
+
+    if (argc == 2) {
+        std::string devGuid(argv[1]);
+        std::cout << "Looking for device: " << devGuid << std::endl;
+        return 0;
+    }
+
+    usage(argv[0]);
+    return 1;
 }

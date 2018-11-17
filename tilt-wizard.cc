@@ -31,8 +31,9 @@
 BOOL
 devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
 {
-    wchar_t guid[100];
-    assert(0 != StringFromGUID2(lpddi->guidInstance, guid, 100));
+    const unsigned G_LEN = 100;
+    wchar_t guid[G_LEN];
+    assert(0 != StringFromGUID2(lpddi->guidInstance, guid, G_LEN));
     std::wcout << guid << "    " << lpddi->tszInstanceName << std::endl;
     return DIENUM_CONTINUE;
 }
@@ -42,7 +43,7 @@ enumerateDevices()
 {
     HINSTANCE hInst = GetModuleHandle(0);
     if (!hInst) {
-        std::cout << "Failed to get module handle" << std::endl;
+        std::wcout << "Failed to get module handle" << std::endl;
         return 1;
     }
 
@@ -50,19 +51,19 @@ enumerateDevices()
     HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
                                      IID_IDirectInput8, (LPVOID*)&idi, 0);
     if (res != DI_OK || !idi) {
-        std::cout << "Failed to get interface to DirectInput" << std::endl;
+        std::wcout << "Failed to get interface to DirectInput" << std::endl;
         return res;
     }
 
     // Enumerate devices
-    std::cout << std::setw(42) << std::left << "Device GUID"
+    std::wcout << std::setw(42) << std::left << "Device GUID"
                << "Name" << std::endl;
-    std::cout << std::setw(70) << std::setfill('=') << "=" << std::endl;
+    std::wcout << std::setw(70) << std::setfill(L'=') << "=" << std::endl;
     int dummy;
     res = idi->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb, &dummy,
                            DIEDFL_ATTACHEDONLY);
     if (res != DI_OK) {
-        std::cout << "Error enumerating devices: " << res << std::endl;
+        std::wcout << "Error enumerating devices: " << res << std::endl;
     }
 
     return res;
@@ -72,12 +73,12 @@ enumerateDevices()
 void
 usage(std::string pname)
 {
-    std::cout << std::endl
-              << pname << " [device_uuid]" << std::endl
-              << "  Note: run w/o arguments to scan available devices"
-              << std::endl << std::endl
-              << "  device_uuid - uuid of device to auto-calibrate"
-              << std::endl;
+    std::wcout << std::endl
+               << pname.c_str() << " [device_uuid]" << std::endl
+               << "  Note: run w/o arguments to scan available devices"
+               << std::endl << std::endl
+               << "  device_uuid - uuid of device to auto-calibrate"
+               << std::endl;
 }
 
 
@@ -88,24 +89,34 @@ int main(int argc, char *argv[])
         return enumerateDevices();
     }
 
-    if (argc == 2) {
-        std::string devGuid(argv[1]);
-        std::transform(devGuid.begin(), devGuid.end(), devGuid.begin(),
-                       ::toupper);
+    // Too many arguments
+    if (argc > 2) {
+        usage(argv[0]);
+        return 1;
+    }
 
-        if (0 == devGuid.compare("/H") ||
-            0 == devGuid.compare("-H") ||
-            0 == devGuid.compare("/HELP") ||
-            0 == devGuid.compare("-HELP") ||
-            0 == devGuid.compare("--HELP")) {
-            usage(argv[0]);
-            return 0;
-        }
+    std::string arg(argv[1]);
+    std::transform(arg.begin(), arg.end(), arg.begin(), ::toupper);
 
-        std::cout << "Looking for device: " << devGuid << std::endl;
+    // Print help text if needed
+    if (0 == arg.compare("/H") ||
+        0 == arg.compare("-H") ||
+        0 == arg.compare("/HELP") ||
+        0 == arg.compare("-HELP") ||
+        0 == arg.compare("--HELP")) {
+        usage(argv[0]);
         return 0;
     }
 
-    usage(argv[0]);
-    return 1;
+    std::wstring devGuid;
+    devGuid.assign(arg.begin(), arg.end());
+    std::wcout << "Looking for device: " << devGuid << std::endl;
+    IID guid;
+    HRESULT res = IIDFromString(devGuid.c_str(), &guid);
+    if (res != S_OK) {
+        std::wcout << "Error parsing device GUID" << std::endl;
+        return 1;
+    }
+
+    return 0;
 }

@@ -13,4 +13,4 @@ tilt-wizard.exe: $(OBJECTS)
 	g++ $(CCFLAGS) -c $^
 
 clean:
-	del $(OBJECTS) tilt-wizard.exe
+	-del $(OBJECTS) tilt-wizard.exe

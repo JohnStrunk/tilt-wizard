@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <iomanip>
@@ -71,9 +72,12 @@ enumerateDevices()
 void
 usage(std::string pname)
 {
-    std::cout << pname << " [device_uuid]" << std::endl
-              << std::endl
-              << "device_uuid  uuid of device to auto-calibrate" << std::endl;
+    std::cout << std::endl
+              << pname << " [device_uuid]" << std::endl
+              << "  Note: run w/o arguments to scan available devices"
+              << std::endl << std::endl
+              << "  device_uuid - uuid of device to auto-calibrate"
+              << std::endl;
 }
 
 
@@ -86,6 +90,18 @@ int main(int argc, char *argv[])
 
     if (argc == 2) {
         std::string devGuid(argv[1]);
+        std::transform(devGuid.begin(), devGuid.end(), devGuid.begin(),
+                       ::toupper);
+
+        if (0 == devGuid.compare("/H") ||
+            0 == devGuid.compare("-H") ||
+            0 == devGuid.compare("/HELP") ||
+            0 == devGuid.compare("-HELP") ||
+            0 == devGuid.compare("--HELP")) {
+            usage(argv[0]);
+            return 0;
+        }
+
         std::cout << "Looking for device: " << devGuid << std::endl;
         return 0;
     }

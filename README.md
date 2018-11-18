@@ -28,7 +28,7 @@ What's the status?
 
 - [x] Enumerate the DirectInput devices attached to your computer by running the
   executable w/ no options.
-- [ ] Open and read the x & y axes of a device specified via its UUID.
+- [x] Open and read the x & y axes of a device specified via its UUID.
 - [ ] Automatically adjust the center point via an EMA of measured values and
   set the axis limits a fixed value on each side of the calculated center point.
 

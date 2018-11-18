@@ -23,10 +23,35 @@
 #include <iostream>
 #include <ostream>
 #include <string>
+#include <unistd.h>
 
 #define DIRECTINPUT_VERSION 0x0800
+#include <comdef.h>
 #include <dinput.h>
 #include <Windows.h>
+
+#ifndef GIT_VERSION
+#define GIT_VERSION (unknown)
+#endif
+
+#ifndef GIT_DATE
+#define GIT_DATE (unknown)
+#endif
+
+#define _TEXTIFY1(x) #x
+#define TEXTIFY(x) _TEXTIFY1(x)
+
+HINSTANCE hInst = 0;
+LPDIRECTINPUT8 di8Interface = 0;
+
+static void
+fatalError(std::wstring message, HRESULT res) {
+    _com_error e(res);
+    std::wcout << message << L": " << e.ErrorMessage()
+               << L" (" << res << ")" << std::endl;
+    abort();
+}
+
 
 BOOL
 devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
@@ -38,39 +63,23 @@ devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
     return DIENUM_CONTINUE;
 }
 
-int
+static int
 enumerateDevices()
 {
-    HINSTANCE hInst = GetModuleHandle(0);
-    if (!hInst) {
-        std::wcout << "Failed to get module handle" << std::endl;
-        return 1;
-    }
-
-    LPDIRECTINPUT8 idi = 0;
-    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
-                                     IID_IDirectInput8, (LPVOID*)&idi, 0);
-    if (res != DI_OK || !idi) {
-        std::wcout << "Failed to get interface to DirectInput" << std::endl;
-        return res;
-    }
-
     // Enumerate devices
     std::wcout << std::setw(42) << std::left << "Device GUID"
                << "Name" << std::endl;
     std::wcout << std::setw(70) << std::setfill(L'=') << "=" << std::endl;
     int dummy;
-    res = idi->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb, &dummy,
-                           DIEDFL_ATTACHEDONLY);
-    if (res != DI_OK) {
-        std::wcout << "Error enumerating devices: " << res << std::endl;
-    }
+    HRESULT res = di8Interface->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb,
+                                            &dummy, DIEDFL_ATTACHEDONLY);
+    if (FAILED(res)) fatalError(L"Error enumerating devices", res);
 
     return res;
 }
 
 
-void
+static void
 usage(std::string pname)
 {
     std::wcout << std::endl
@@ -82,8 +91,20 @@ usage(std::string pname)
 }
 
 
+static void
+printVersion()
+{
+    std::wcout << "tilt-wizard - https://github.com/JohnStrunk/tilt-wizard"
+               << std::endl
+               << "Version: " << TEXTIFY(GIT_VERSION) << std::endl
+               << "Date: " << TEXTIFY(GIT_DATE) << std::endl << std::endl;
+}
+
+
 int main(int argc, char *argv[])
 {
+    printVersion();
+
     // No arguments, so just enumerate the DirectInput devices we find.
     if (argc < 2) {
         return enumerateDevices();
@@ -108,15 +129,79 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    // Initialize module handle instance
+    hInst = GetModuleHandle(0);
+    if (!hInst) {
+        std::wcout << "Failed to get module handle" << std::endl;
+        return 1;
+    }
+
+    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
+                                     IID_IDirectInput8, (LPVOID*)&di8Interface,
+                                     0);
+    if (FAILED(res)) fatalError(L"Failed to get interface to DirectInput", res);
+
     std::wstring devGuid;
     devGuid.assign(arg.begin(), arg.end());
     std::wcout << "Looking for device: " << devGuid << std::endl;
     IID guid;
-    HRESULT res = IIDFromString(devGuid.c_str(), &guid);
-    if (res != S_OK) {
-        std::wcout << "Error parsing device GUID" << std::endl;
-        return 1;
+    res = IIDFromString(devGuid.c_str(), &guid);
+    if (FAILED(res)) fatalError(L"Error parsing device GUID", res);
+
+    LPDIRECTINPUTDEVICE8 di8Dev = 0;
+    res = di8Interface->CreateDevice(guid, &di8Dev, 0);
+    if (FAILED(res)) fatalError(L"Unable to get handle for device", res);
+
+    DIDEVICEINSTANCE di;
+    di.dwSize = sizeof(di);
+    res = di8Dev->GetDeviceInfo(&di);
+    if (FAILED(res)) fatalError(L"Failed getting device info", res);
+    std::wcout << "Device name: " << di.tszInstanceName << std::endl;
+
+    res = di8Dev->SetCooperativeLevel(0, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);
+    if (FAILED(res)) fatalError(L"Failed setting device cooperation level", res);
+    res = di8Dev->SetDataFormat(&c_dfDIJoystick);
+    if (FAILED(res)) fatalError(L"Failed setting data format", res);
+
+    // retrieve RAW data
+    DIPROPDWORD dipdw;
+    dipdw.diph.dwSize = sizeof(dipdw);
+    dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
+    dipdw.diph.dwObj = 0;
+    dipdw.diph.dwHow = DIPH_DEVICE;
+    dipdw.dwData = DIPROPCALIBRATIONMODE_RAW;
+    res = di8Dev->SetProperty(DIPROP_CALIBRATIONMODE, &dipdw.diph);
+    if (FAILED(res)) fatalError(L"Failed setting calibration mode", res);
+
+    res = di8Dev->Acquire();
+    if (FAILED(res)) fatalError(L"Failed acquiring device", res);
+
+    // retrieve the calibration points
+    // https://docs.microsoft.com/en-us/previous-versions/windows/desktop/ee419009(v%3dvs.85)
+    DIPROPCPOINTS dicp;
+    dicp.diph.dwSize = sizeof(dicp);
+    dicp.diph.dwHeaderSize = sizeof(dicp.diph);
+    dicp.diph.dwObj = DIJOFS_X;  // x-axis
+    dicp.diph.dwHow = DIPH_BYOFFSET;
+    dicp.dwCPointsNum = MAXCPOINTSNUM;
+    res = di8Dev->GetProperty(DIPROP_CPOINTS, &dipdw.diph);
+    if (FAILED(res)) fatalError(L"Failed getting calibration points", res);
+    for (unsigned i=0; i<dicp.dwCPointsNum; ++i) {
+        std::wcout << "point " << i << ": " << dicp.cp[i].lP << " " << dicp.cp[i].dwLog << std::endl;
     }
+    exit(1);
+
+    while (true) {
+        res = di8Dev->Poll();
+        if (FAILED(res)) fatalError(L"Failed polling current value", res);
+        DIJOYSTATE state;
+        res = di8Dev->GetDeviceState(sizeof(state), &state);
+        if (FAILED(res)) fatalError(L"Failed getting current value", res);
+        std::wcout << "x:" << state.lX << " y:" << state.lY << std::endl;
+        usleep(100000);
+    }
+    res = di8Dev->Unacquire();
+    if (FAILED(res)) fatalError(L"Failed unacquiring device", res);
 
     return 0;
 }

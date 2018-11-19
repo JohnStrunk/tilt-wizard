@@ -71,6 +71,7 @@ enumerateDevices()
                << "Name" << std::endl;
     std::wcout << std::setw(70) << std::setfill(L'=') << "=" << std::endl;
     int dummy;
+    //HRESULT res = di8Interface->EnumDevices(DI8DEVCLASS_ALL, devEnumCb,
     HRESULT res = di8Interface->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb,
                                             &dummy, DIEDFL_ATTACHEDONLY);
     if (FAILED(res)) fatalError(L"Error enumerating devices", res);
@@ -105,6 +106,19 @@ int main(int argc, char *argv[])
 {
     printVersion();
 
+    // Initialize module handle instance
+    hInst = GetModuleHandle(0);
+    if (!hInst) {
+        std::wcout << "Failed to get module handle" << std::endl;
+        return 1;
+    }
+
+    // Initialize DirectInput
+    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
+                                     IID_IDirectInput8, (LPVOID*)&di8Interface,
+                                     0);
+    if (FAILED(res)) fatalError(L"Failed to get interface to DirectInput", res);
+
     // No arguments, so just enumerate the DirectInput devices we find.
     if (argc < 2) {
         return enumerateDevices();
@@ -128,18 +142,6 @@ int main(int argc, char *argv[])
         usage(argv[0]);
         return 0;
     }
-
-    // Initialize module handle instance
-    hInst = GetModuleHandle(0);
-    if (!hInst) {
-        std::wcout << "Failed to get module handle" << std::endl;
-        return 1;
-    }
-
-    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
-                                     IID_IDirectInput8, (LPVOID*)&di8Interface,
-                                     0);
-    if (FAILED(res)) fatalError(L"Failed to get interface to DirectInput", res);
 
     std::wstring devGuid;
     devGuid.assign(arg.begin(), arg.end());
@@ -170,6 +172,7 @@ int main(int argc, char *argv[])
     dipdw.diph.dwObj = 0;
     dipdw.diph.dwHow = DIPH_DEVICE;
     dipdw.dwData = DIPROPCALIBRATIONMODE_RAW;
+    //dipdw.dwData = DIPROPCALIBRATIONMODE_COOKED;
     res = di8Dev->SetProperty(DIPROP_CALIBRATIONMODE, &dipdw.diph);
     if (FAILED(res)) fatalError(L"Failed setting calibration mode", res);
 
@@ -178,18 +181,48 @@ int main(int argc, char *argv[])
 
     // retrieve the calibration points
     // https://docs.microsoft.com/en-us/previous-versions/windows/desktop/ee419009(v%3dvs.85)
-    DIPROPCPOINTS dicp;
-    dicp.diph.dwSize = sizeof(dicp);
-    dicp.diph.dwHeaderSize = sizeof(dicp.diph);
-    dicp.diph.dwObj = DIJOFS_X;  // x-axis
-    dicp.diph.dwHow = DIPH_BYOFFSET;
-    dicp.dwCPointsNum = MAXCPOINTSNUM;
-    res = di8Dev->GetProperty(DIPROP_CPOINTS, &dipdw.diph);
-    if (FAILED(res)) fatalError(L"Failed getting calibration points", res);
-    for (unsigned i=0; i<dicp.dwCPointsNum; ++i) {
-        std::wcout << "point " << i << ": " << dicp.cp[i].lP << " " << dicp.cp[i].dwLog << std::endl;
+    // Calibration points are no longer supported.
+    /*
+    DIPROPCPOINTS dipcp;
+    dipcp.diph.dwSize = sizeof(dipcp);
+    dipcp.diph.dwHeaderSize = sizeof(dipcp.diph);
+    dipcp.diph.dwObj = DIJOFS_X;
+    dipcp.diph.dwHow = DIPH_BYOFFSET;
+    res = di8Dev->GetProperty(DIPROP_CPOINTS, &dipcp.diph);
+    if (FAILED(res)) {
+        std::wcout << L"Failed getting calibration points " << res << std::endl;
+    } else {
+        for (unsigned i=0; i<dipcp.dwCPointsNum; ++i) {
+            std::wcout << "point " << i << ": "
+                       << dipcp.cp[i].lP << " " << dipcp.cp[0].dwLog
+                       << std::endl;
+        }
     }
-    exit(1);
+    */
+
+    // Retrieve calibration
+    DIPROPCAL dical;
+    dical.diph.dwSize = sizeof(dical);
+    dical.diph.dwHeaderSize = sizeof(dical.diph);
+    dical.diph.dwObj = DIJOFS_X;  // x-axis
+    dical.diph.dwHow = DIPH_BYOFFSET;
+    res = di8Dev->GetProperty(DIPROP_CALIBRATION, &dical.diph);
+    if (FAILED(res)) {
+        std::wcout << L"Failed getting calibration data " << res << std::endl;
+    } else {
+        std::wcout << "min: " << dical.lMin
+                   << "  center: " << dical.lCenter
+                   << "  max: " << dical.lMax
+                   << std::endl;
+    }
+
+    dipdw.diph.dwObj = DIJOFS_X;
+    dipdw.diph.dwHow = DIPH_BYOFFSET;
+    res = di8Dev->GetProperty(DIPROP_DEADZONE, &dipdw.diph);
+    if (FAILED(res)) fatalError(L"Failed getting deadzone", res);
+    std::wcout << "deadzone: " << dipdw.dwData << std::endl;
+
+    sleep(10);
 
     while (true) {
         res = di8Dev->Poll();

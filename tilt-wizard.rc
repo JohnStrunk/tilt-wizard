@@ -1,0 +1,46 @@
+/*
+ * Tilt-wizard
+ * Copyright (C) 2018  John D. Strunk
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+ #include "Winver.h"
+
+ #define _TEXTIFY1(x) #x
+ #define TEXTIFY(x) _TEXTIFY1(x)
+
+1 VERSIONINFO
+    FILEFLAGS VS_FF_DEBUG
+    FILETYPE VFT_APP
+    {
+        BLOCK "StringFileInfo" {
+            // US-English language block (0409) in Unicode (04b0)
+            BLOCK "040904b0" {
+                VALUE "ProductName", "tilt-wizard\0"
+                VALUE "OriginalFilename", "tilt-wizard.exe\0"
+                VALUE "ProductVersion", TEXTIFY(GIT_VERSION) ## "\0"
+                VALUE "FileDescription", "Automatically calibrates gamepad accelerometer\0"
+                VALUE "LegalCopyright", "Copyright (c) 2018 John D. Strunk\0"
+                VALUE "LegalTrademarks", "Licensed under GNU Affero General Public License v3 or later\0"
+                //VALUE "CompanyName", "https://github.com/JohnStrunk/tilt-wizard\0"
+                VALUE "CompanyName", "xxx\0"
+                VALUE "Comments", "xxx\0"
+                VALUE "InternalName", "xxx\0"
+            }
+        }
+        BLOCK "VarFileInfo" {
+            VALUE "Translation", 0x409, 1200 // English, Unicode
+        }
+    }

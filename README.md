@@ -22,15 +22,28 @@ calibrates the center, limits, and deadzone on-the-fly.
 
 ## Using tilt-wizard
 
-*Well, you can't, yet... It's not done.*
+Download the latest version from the [Releases page](releases).
 
-What's the status?
+Run `tilt-wizard` with no arguments to scan for available DirectInput devices:
 
-- [x] Enumerate the DirectInput devices attached to your computer by running the
-  executable w/ no options.
-- [x] Open and read the x & y axes of a device specified via its UUID.
-- [ ] Automatically adjust the center point via an EMA of measured values and
-  set the axis limits a fixed value on each side of the calculated center point.
+```
+C:\tilt-wizard>tilt-wizard.exe
+```
+
+This should discover any devices attached to your computer. To have tilt-wizard
+automatically tune the device, pass in the GUID of the desired device:
+
+```
+C:\tilt-wizard>tilt-wizard.exe {34BE2320-42C7-11E6-8001-444553540000}
+```
+
+The application will then run, sampling the X & Y axes and updating the center
+point.
+
+- `current`: The most recent sample
+- `avg`: The currently calculated average (and center point)
+- `stdev`: The calculated standard deviation of the incoming data. You probably
+  want to manually set the deadzone percentage to approximately 4x this value.
 
 ## Building from source
 
@@ -54,12 +67,12 @@ set PATH=%PATH%;C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin
 You should now be able to build via:
 
 ```
-c:\tilt-wizard> mingw32-make
+C:\tilt-wizard>mingw32-make
 ... build output ...
 ```
 
 Then run it via:
 
 ```
-c:\tilt-wizard> tilt-wizard.exe
+C:\tilt-wizard>tilt-wizard.exe
 ```

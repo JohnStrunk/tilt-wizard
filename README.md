@@ -22,7 +22,8 @@ calibrates the center, limits, and deadzone on-the-fly.
 
 ## Using tilt-wizard
 
-Download the latest version from the [Releases page](releases).
+Download the latest version from the [Releases
+page](https://github.com/JohnStrunk/tilt-wizard/releases).
 
 Run `tilt-wizard` with no arguments to scan for available DirectInput devices:
 

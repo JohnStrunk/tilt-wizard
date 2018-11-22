@@ -1,6 +1,9 @@
 # tilt-wizard
 
-[![Build Status](https://dev.azure.com/johnstrunk/tilt-wizard/_apis/build/status/JohnStrunk.tilt-wizard)](https://dev.azure.com/johnstrunk/tilt-wizard/_build/latest?definitionId=1)
+[![Build
+Status](https://dev.azure.com/johnstrunk/tilt-wizard/_apis/build/status/JohnStrunk.tilt-wizard)](https://dev.azure.com/johnstrunk/tilt-wizard/_build/latest?definitionId=1)
+[![Waffle.io - Columns and their card
+count](https://badge.waffle.io/JohnStrunk/tilt-wizard.svg?columns=all)](https://waffle.io/JohnStrunk/tilt-wizard)
 
 `tilt-wizard` is a simple Windows cli program to automatically calibrate
 DirectInput-based motion sensors used for Virtual Pinball.

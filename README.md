@@ -49,6 +49,13 @@ point.
 - `stdev`: The calculated standard deviation of the incoming data. You probably
   want to manually set the deadzone percentage to approximately 4x this value.
 
+Example:
+
+![Example output fo tilt-wizard](docs/images/output.png)
+
+To integrate tilt-wizard with your pinball cabinet, see the [installation
+document](docs/installation.md).
+
 ## Building from source
 
 You will need [MinGW-w64](http://www.mingw-w64.org/) to build the source. While

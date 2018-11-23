@@ -108,7 +108,7 @@ setAxisCalibration(LPDIRECTINPUTDEVICE8 di8Dev,
     dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
     dipdw.diph.dwObj = axis;
     dipdw.diph.dwHow = DIPH_BYOFFSET;
-    dipdw.dwData = (DWORD)(4.0*stdev*100/range);
+    dipdw.dwData = (DWORD)(std::min(4.0*stdev*10000/range, 10000.0));
     res = di8Dev->SetProperty(DIPROP_DEADZONE, &dipdw.diph);
     if (FAILED(res)) {
         std::wcout << "#";

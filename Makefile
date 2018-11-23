@@ -7,6 +7,9 @@ GIT_VERSION:= (unknown)
 GIT_DATE:= (unknown)
 endif
 
+GPG:= gpg
+SIGNING_KEY:= BD1FF508
+
 CCFLAGS:= -Wall -Werror -ggdb -D_FORTIFY_SOURCE=2 -D_GLIBCXX_ASSERTIONS \
           -fasynchronous-unwind-tables -fexceptions -fpic \
           -fstack-clash-protection -grecord-gcc-switches -fcf-protection \
@@ -19,10 +22,16 @@ OBJECTS:= $(SOURCES:.cc=.o) $(RESOURCES:.rc=-rc.o)
 LIBS:= -ldinput8 -ldxguid -lole32
 
 
-.PHONY: clean
+.PHONY: all clean release
+
+all: tilt-wizard.exe
 
 tilt-wizard.exe: $(OBJECTS)
 	g++ -static -o $@ $(CCFLAGS) $^ -mconsole $(LIBS)
+
+%.asc: %
+	-del $@
+	$(GPG) --detach-sign --armor --local-user $(SIGNING_KEY) $<
 
 %.o: %.cc Makefile
 	g++ $(CCFLAGS) $(DEFINES) -c $<
@@ -31,4 +40,9 @@ tilt-wizard.exe: $(OBJECTS)
 	windres "-DGIT_VERSION=\"$(GIT_VERSION)\"" $< $@
 
 clean:
-	-del $(OBJECTS) tilt-wizard.exe
+	-del $(OBJECTS) tilt-wizard.exe tilt-wizard.exe.asc
+
+release:
+	$(MAKE) clean
+	$(MAKE) tilt-wizard.exe tilt-wizard.exe.asc
+	$(GPG) --verify tilt-wizard.exe.asc

@@ -173,18 +173,20 @@ calibrateDevice(std::string guidString, int axisRange)
 static void
 usage(std::string pname)
 {
-    std::wcout << std::endl
-               << pname.c_str() << " [options]" << std::endl
-               << std::endl
-               << "  -d, --device device_uuid   auto-calibrate specified device"
-               << std::endl
-               << "  -h, --help                 this help message"
-               << std::endl
-               << "  -l, --list                 list available devices"
-               << std::endl
-               << "  -r, --range                axis range, center to max"
-               << " (-r " << DEFAULT_RANGE << ")"
-               << std::endl;
+    std::cout << std::endl << "Usage:" << std::endl
+              << "  " << pname.c_str() << " -h|--help" << std::endl
+              << "  " << pname.c_str() << " -l|--list" << std::endl
+              << "  " << pname.c_str() << " -d|--device device_guid  [options...]" << std::endl
+              << std::endl
+              << "  -d, --device device_uuid   auto-calibrate specified device"
+              << std::endl
+              << "  -h, --help                 this help message"
+              << std::endl
+              << "  -l, --list                 list available devices"
+              << std::endl
+              << "  -r, --range                axis range, center to max"
+              << " (default: " << DEFAULT_RANGE << ")"
+              << std::endl;
 }
 
 

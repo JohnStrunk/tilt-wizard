@@ -23,6 +23,7 @@
 #include <iostream>
 #include <ostream>
 #include <string>
+#include <getopt.h>
 #include <unistd.h>
 
 #define DIRECTINPUT_VERSION 0x0800
@@ -44,6 +45,8 @@
 
 #define _TEXTIFY1(x) #x
 #define TEXTIFY(x) _TEXTIFY1(x)
+
+static const int DEFAULT_RANGE = 100;
 
 static void
 fatalError(std::wstring message, HRESULT res) {
@@ -93,12 +96,14 @@ enumerateDevices()
 }
 
 static void
-calibrateDevice(std::wstring guidString)
+calibrateDevice(std::string guidString, int axisRange)
 {
     // Turn string into a GUID
-    std::wcout << "Looking for device: " << guidString << std::endl;
+    std::cout << "Looking for device: " << guidString << std::endl;
     IID guid;
-    HRESULT res = IIDFromString(guidString.c_str(), &guid);
+    std::wstring wGuid;
+    wGuid.assign(guidString.begin(), guidString.end());
+    HRESULT res = IIDFromString(wGuid.c_str(), &guid);
     if (FAILED(res)) fatalError(L"Error parsing device GUID", res);
 
     Device dev(&guid);
@@ -142,13 +147,13 @@ calibrateDevice(std::wstring guidString)
         // Update calibration 1/sec
         if (i % 10 == 0) {
             dev.deadzone(DIJOFS_X, std::min(4.0*xStats.stdev(), 100.0));
-            dev.calibration(DIJOFS_X, xStats.avg() - 100,
+            dev.calibration(DIJOFS_X, xStats.avg() - axisRange,
                                       xStats.avg(),
-                                      xStats.avg() + 100);
+                                      xStats.avg() + axisRange);
             dev.deadzone(DIJOFS_Y, std::min(4.0*yStats.stdev(), 100.0));
-            dev.calibration(DIJOFS_Y, yStats.avg() - 100,
+            dev.calibration(DIJOFS_Y, yStats.avg() - axisRange,
                                       yStats.avg(),
-                                      yStats.avg() + 100);
+                                      yStats.avg() + axisRange);
         }
 
         // Print stats
@@ -169,10 +174,16 @@ static void
 usage(std::string pname)
 {
     std::wcout << std::endl
-               << pname.c_str() << " [device_uuid]" << std::endl
-               << "  Note: run without arguments to scan available devices"
-               << std::endl << std::endl
-               << "  device_uuid - uuid of device to auto-calibrate"
+               << pname.c_str() << " [options]" << std::endl
+               << std::endl
+               << "  -d, --device device_uuid   auto-calibrate specified device"
+               << std::endl
+               << "  -h, --help                 this help message"
+               << std::endl
+               << "  -l, --list                 list available devices"
+               << std::endl
+               << "  -r, --range                axis range, center to max"
+               << " (-r " << DEFAULT_RANGE << ")"
                << std::endl;
 }
 
@@ -192,33 +203,50 @@ int main(int argc, char *argv[])
 {
     printVersion();
 
-    // No arguments, so just enumerate the DirectInput devices we find.
-    if (argc < 2) {
-        enumerateDevices();
-        return 0;
+    std::string devGuid;
+    int range = DEFAULT_RANGE;
+    char opt;
+    struct option longopts[] = {
+        {"device", required_argument, 0, 'd'},
+        {"help", no_argument, 0, 'h'},
+        {"list", no_argument, 0, 'l'},
+        {"range", required_argument, 0, 'r'},
+        {0, 0, 0, 0}
+    };
+    while ((opt = getopt_long(argc, argv, "d:hlr:", longopts, 0)) != -1) {
+        switch (opt) {
+        case 'd':
+            devGuid = optarg;
+            break;
+        case 'h':
+            usage(argv[0]);
+            exit(EXIT_SUCCESS);
+            break;
+        case 'l':
+            enumerateDevices();
+            exit(EXIT_SUCCESS);
+            break;
+        case 'r':
+            range = atoi(optarg);
+            break;
+        default: /* '?' */
+            usage(argv[0]);
+            exit(EXIT_FAILURE);
+        }
     }
 
-    // Too many arguments
-    if (argc > 2) {
+    if (range <= 0) {
+        std::cout << "Axis range must be > 0" << std::endl;
         usage(argv[0]);
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
-    std::string arg(argv[1]);
-    std::transform(arg.begin(), arg.end(), arg.begin(), ::toupper);
-
-    // Print help text if needed
-    if (0 == arg.compare("/H") ||
-        0 == arg.compare("-H") ||
-        0 == arg.compare("/HELP") ||
-        0 == arg.compare("-HELP") ||
-        0 == arg.compare("--HELP")) {
-        usage(argv[0]);
+    if (!devGuid.empty()) {
+        calibrateDevice(devGuid, range);
         return 0;
+    } else {
+        std::cout << "Must specify one of -d, -h or -l" << std::endl;
+        usage(argv[0]);
+        exit(EXIT_FAILURE);
     }
-
-    std::wstring devGuid;
-    devGuid.assign(arg.begin(), arg.end());
-    calibrateDevice(devGuid);
-    return 0;
 }

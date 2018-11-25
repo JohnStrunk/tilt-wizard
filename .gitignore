@@ -1,3 +1,4 @@
 *.o
+docs/html/
 tilt-wizard.exe
 tilt-wizard.exe.asc

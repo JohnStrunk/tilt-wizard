@@ -22,7 +22,7 @@ OBJECTS:= $(SOURCES:.cc=.o) $(RESOURCES:.rc=-rc.o)
 LIBS:= -ldinput8 -ldxguid -lole32
 
 
-.PHONY: all clean release
+.PHONY: all clean doc release
 
 all: tilt-wizard.exe
 
@@ -41,6 +41,10 @@ tilt-wizard.exe: $(OBJECTS)
 
 clean:
 	-del $(OBJECTS) tilt-wizard.exe tilt-wizard.exe.asc
+	-rmdir /s /q "docs\html"
+
+doc:
+	doxygen
 
 release:
 	$(MAKE) clean

@@ -49,10 +49,10 @@
 static const int DEFAULT_RANGE = 100;
 
 static void
-fatalError(std::wstring message, HRESULT res) {
+fatalError(std::string message, HRESULT res) {
     _com_error e(res);
-    std::wcout << message << L": " << e.ErrorMessage()
-               << L" (" << res << ")" << std::endl;
+    std::cout << message << ": " << e.ErrorMessage()
+              << " (" << res << ")" << std::endl;
     abort();
 }
 
@@ -63,7 +63,10 @@ devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
     const unsigned G_LEN = 100;
     wchar_t guid[G_LEN];
     assert(0 != StringFromGUID2(lpddi->guidInstance, guid, G_LEN));
-    std::wcout << guid << "    " << lpddi->tszInstanceName << std::endl;
+    std::wstring wgstring(guid);
+    std::string gstring;
+    gstring.assign(wgstring.begin(), wgstring.end());
+    std::cout << gstring << "    " << lpddi->tszInstanceName << std::endl;
     return DIENUM_CONTINUE;
 }
 
@@ -73,7 +76,7 @@ enumerateDevices()
     // Initialize module handle instance
     HINSTANCE hInst = GetModuleHandle(0);
     if (!hInst) {
-        std::wcout << "Failed to get module handle" << std::endl;
+        std::cout << "Failed to get module handle" << std::endl;
         abort();
     }
 
@@ -82,17 +85,17 @@ enumerateDevices()
     HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
                                      IID_IDirectInput8, (LPVOID*)&di8Interface,
                                      0);
-    if (FAILED(res)) fatalError(L"Failed to get interface to DirectInput", res);
+    if (FAILED(res)) fatalError("Failed to get interface to DirectInput", res);
 
     // Enumerate devices
-    std::wcout << std::setw(42) << std::left << "Device GUID"
+    std::cout << std::setw(42) << std::left << "Device GUID"
                << "Name" << std::endl;
-    std::wcout << std::setw(70) << std::setfill(L'=') << "=" << std::endl;
+    std::cout << std::setw(70) << std::setfill('=') << "=" << std::endl;
     int dummy;
     //HRESULT res = di8Interface->EnumDevices(DI8DEVCLASS_ALL, devEnumCb,
     res = di8Interface->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb,
                                     &dummy, DIEDFL_ATTACHEDONLY);
-    if (FAILED(res)) fatalError(L"Error enumerating devices", res);
+    if (FAILED(res)) fatalError("Error enumerating devices", res);
 }
 
 static void
@@ -104,7 +107,7 @@ calibrateDevice(std::string guidString, int axisRange)
     std::wstring wGuid;
     wGuid.assign(guidString.begin(), guidString.end());
     HRESULT res = IIDFromString(wGuid.c_str(), &guid);
-    if (FAILED(res)) fatalError(L"Error parsing device GUID", res);
+    if (FAILED(res)) fatalError("Error parsing device GUID", res);
 
     Device dev(&guid);
     std::cout << "Device name: " << dev.name() << std::endl;
@@ -157,13 +160,13 @@ calibrateDevice(std::string guidString, int axisRange)
         }
 
         // Print stats
-        std::wcout << std::setprecision(0) << std::fixed;
-        std::wcout << "\r    x: " << std::setw(6) << x
-                   << " " << std::setw(6) << xStats.avg()
-                   << " " << std::setw(6) << xStats.stdev()
-                   << "    y: " << std::setw(6) << y
-                   << " " << std::setw(6) << yStats.avg()
-                   << " " << std::setw(6) << yStats.stdev();
+        std::cout << std::setprecision(0) << std::fixed;
+        std::cout << "\r    x: " << std::setw(6) << x
+                  << " " << std::setw(6) << xStats.avg()
+                  << " " << std::setw(6) << xStats.stdev()
+                  << "    y: " << std::setw(6) << y
+                  << " " << std::setw(6) << yStats.avg()
+                  << " " << std::setw(6) << yStats.stdev();
         // Pause 0.1s between samples
         usleep(100000);
     }
@@ -193,11 +196,11 @@ usage(std::string pname)
 static void
 printVersion()
 {
-    std::wcout << "tilt-wizard - https://github.com/JohnStrunk/tilt-wizard"
-               << std::endl
-               << "License: AGPL v3 or later" << std::endl
-               << "Version: " << TEXTIFY(GIT_VERSION) << std::endl
-               << "Date: " << TEXTIFY(GIT_DATE) << std::endl << std::endl;
+    std::cout << "tilt-wizard - https://github.com/JohnStrunk/tilt-wizard"
+              << std::endl
+              << "License: AGPL v3 or later" << std::endl
+              << "Version: " << TEXTIFY(GIT_VERSION) << std::endl
+              << "Date: " << TEXTIFY(GIT_DATE) << std::endl << std::endl;
 }
 
 

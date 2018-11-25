@@ -21,19 +21,26 @@
 
 #include <math.h>
 
+/// Calculates exponential moving statistics
 class EMStat {
-        double _momentum;
-        double _avg;
-        double _var;
+    /// Weight of the existing statistic (0-1.0)
+    double _momentum;
+    /// Current average
+    double _avg;
+    /// Current variance
+    double _var;
 public:
-        EMStat(double momentum): _momentum(momentum), _avg(0), _var(0) { }
+    /// Create a new stat object using the specified momentum
+    EMStat(double momentum): _momentum(momentum), _avg(0), _var(0) { }
 
-        void set(double avg, double var) { _avg = avg; _var = var; }
-        void insert(double val);
+    /// Reset the statistics to a specified value
+    void set(double avg, double var) { _avg = avg; _var = var; }
+    /// Insert a new data point
+    void insert(double val);
 
-        double avg() const { return _avg; }
-        double var() const { return _var; }
-        double stdev() const { return sqrt(var()); }
+    double avg() const { return _avg; }
+    double var() const { return _var; }
+    double stdev() const { return sqrt(var()); }
 };
 
 #endif // EMSTAT_H

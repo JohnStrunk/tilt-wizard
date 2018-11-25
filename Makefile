@@ -16,7 +16,7 @@ CCFLAGS:= -Wall -Werror -ggdb -D_FORTIFY_SOURCE=2 -D_GLIBCXX_ASSERTIONS \
           -O2 -pipe
 DEFINES:= "-DGIT_VERSION=$(GIT_VERSION)" "-DGIT_DATE=$(GIT_DATE)"
 
-SOURCES:= EMStat.cc tilt-wizard.cc
+SOURCES:= Device.cc EMStat.cc tilt-wizard.cc
 RESOURCES:= tilt-wizard.rc
 OBJECTS:= $(SOURCES:.cc=.o) $(RESOURCES:.rc=-rc.o)
 LIBS:= -ldinput8 -ldxguid -lole32

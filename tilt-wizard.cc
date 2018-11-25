@@ -31,6 +31,7 @@
 //#include <dinputd.h>
 #include <Windows.h>
 
+#include "Device.h"
 #include "EMStat.h"
 
 #ifndef GIT_VERSION
@@ -83,52 +84,6 @@ enumerateDevices()
 }
 
 static void
-setAxisCalibration(LPDIRECTINPUTDEVICE8 di8Dev,
-                   WORD axis,
-                   LONG centerPos,
-                   double stdev)
-{
-    HRESULT res;
-
-    const int range = 100;
-
-    DIPROPCAL dical;
-    dical.diph.dwSize = sizeof(dical);
-    dical.diph.dwHeaderSize = sizeof(dical.diph);
-    dical.diph.dwObj = axis;
-    dical.diph.dwHow = DIPH_BYOFFSET;
-    dical.lMin = centerPos - range;
-    dical.lCenter = centerPos;
-    dical.lMax = centerPos + range;
-    res = di8Dev->SetProperty(DIPROP_CALIBRATION, &dical.diph);
-    if (FAILED(res)) fatalError(L"Failed setting calibration", res);
-
-    DIPROPDWORD dipdw;
-    dipdw.diph.dwSize = sizeof(dipdw);
-    dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
-    dipdw.diph.dwObj = axis;
-    dipdw.diph.dwHow = DIPH_BYOFFSET;
-    dipdw.dwData = (DWORD)(std::min(4.0*stdev*10000/range, 10000.0));
-    res = di8Dev->SetProperty(DIPROP_DEADZONE, &dipdw.diph);
-    if (FAILED(res)) {
-        std::wcout << "#";
-    } else {
-        std::wcout << " ";
-    }
-/*
-    LPDIRECTINPUTJOYCONFIG idijc = 0;
-    res = di8Dev->QueryInterface(IID_IDirectInputJoyConfig,(LPVOID*)&idijc);
-    if (FAILED(res)) fatalError(L"Unable to get JoyConfig", res);
-    res = idijc->Acquire();
-    if (FAILED(res)) fatalError(L"JoyConfig acquire", res);
-    res = idijc->SendNotify();
-    if (FAILED(res)) fatalError(L"JoyConfig SendNotify", res);
-    res = idijc->Release();
-    if (FAILED(res)) fatalError(L"JoyConfig Release", res);
-*/
-}
-
-static void
 calibrateDevice(std::wstring guidString)
 {
     // Turn string into a GUID
@@ -137,35 +92,12 @@ calibrateDevice(std::wstring guidString)
     HRESULT res = IIDFromString(guidString.c_str(), &guid);
     if (FAILED(res)) fatalError(L"Error parsing device GUID", res);
 
-    // Get the device corresponding to the GUID
-    LPDIRECTINPUTDEVICE8 di8Dev = 0;
-    res = di8Interface->CreateDevice(guid, &di8Dev, 0);
-    if (FAILED(res)) fatalError(L"Unable to get handle for device", res);
+    Device dev(&guid);
+    std::cout << "Device name: " << dev.name() << std::endl;
 
-    DIDEVICEINSTANCE di;
-    di.dwSize = sizeof(di);
-    res = di8Dev->GetDeviceInfo(&di);
-    if (FAILED(res)) fatalError(L"Failed getting device info", res);
-    std::wcout << "Device name: " << di.tszInstanceName << std::endl;
-
-    // Configure the device
-    res = di8Dev->SetCooperativeLevel(0, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);
-    if (FAILED(res)) fatalError(L"Failed setting device cooperation level", res);
-    res = di8Dev->SetDataFormat(&c_dfDIJoystick);
-    if (FAILED(res)) fatalError(L"Failed setting data format", res);
-    DIPROPDWORD dipdw;
-    dipdw.diph.dwSize = sizeof(dipdw);
-    dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
-    dipdw.diph.dwObj = 0;
-    dipdw.diph.dwHow = DIPH_DEVICE;
-    // Set to retrieve RAW data from device
-    dipdw.dwData = DIPROPCALIBRATIONMODE_RAW;
-    res = di8Dev->SetProperty(DIPROP_CALIBRATIONMODE, &dipdw.diph);
-    if (FAILED(res)) fatalError(L"Failed setting calibration mode", res);
-
-    // Open the device so we can read
-    res = di8Dev->Acquire();
-    if (FAILED(res)) fatalError(L"Failed acquiring device", res);
+    // Grab values once to initialize the stats
+    dev.poll();
+    sleep(1);  // Let the device start sending data
 
     /*
      * Create stats objects
@@ -173,51 +105,49 @@ calibrateDevice(std::wstring guidString)
      * second is ~10% of the statistic
      */
     EMStat xStats(0.99), yStats(0.99);
+    dev.poll();
+    xStats.set(dev.position(DIJOFS_X), 100*100);
+    yStats.set(dev.position(DIJOFS_Y), 100*100);
 
-    // Grab values once to initialize the stats
-    DIJOYSTATE state;
-    res = di8Dev->Poll();
-    sleep(1);  // Let the device start sending data
-    if (FAILED(res)) fatalError(L"Failed polling current value", res);
-    res = di8Dev->GetDeviceState(sizeof(state), &state);
-    if (FAILED(res)) fatalError(L"Failed getting current value", res);
-    xStats.set(state.lX, 10000);
-    yStats.set(state.lY, 10000);
-
-    std::wcout << std::right
-               << std::setw(13) << "current"
-               << std::setw(7) << "avg"
-               << std::setw(7) << "stdev"
-               << std::setw(13) << "current"
-               << std::setw(7) << "avg"
-               << std::setw(7) << "stdev"
-               << std::endl;
+    std::cout << std::right
+              << std::setw(13) << "current"
+              << std::setw(7) << "avg"
+              << std::setw(7) << "stdev"
+              << std::setw(13) << "current"
+              << std::setw(7) << "avg"
+              << std::setw(7) << "stdev"
+              << std::endl;
 
     for (unsigned i=1; ;++i) {
-        // Some devices require polling
-        res = di8Dev->Poll();
-        if (FAILED(res)) fatalError(L"Failed polling current value", res);
-        // Read the current, unbuffered value
-        res = di8Dev->GetDeviceState(sizeof(state), &state);
-        if (FAILED(res)) fatalError(L"Failed getting current value", res);
+        dev.poll();
 
+        LONG x = dev.position(DIJOFS_X);
         // Reject extreme values (nudges); ensure we always accept something
-        if (abs(state.lX - xStats.avg()) < std::max(2.0*xStats.stdev(), 10.0))
-            xStats.insert(state.lX);
-        if (abs(state.lY - yStats.avg()) < std::max(2.0*yStats.stdev(), 10.0))
-            yStats.insert(state.lY);
+        if (abs(x - xStats.avg()) < std::max(2.0*xStats.stdev(), 10.0))
+            xStats.insert(x);
+
+        LONG y = dev.position(DIJOFS_Y);
+        if (abs(y - yStats.avg()) < std::max(2.0*yStats.stdev(), 10.0))
+            yStats.insert(y);
 
         // Update calibration 1/sec
         if (i % 10 == 0) {
-            setAxisCalibration(di8Dev, DIJOFS_X, xStats.avg(), xStats.stdev());
-            setAxisCalibration(di8Dev, DIJOFS_Y, yStats.avg(), yStats.stdev());
+            dev.deadzone(DIJOFS_X, std::min(4.0*xStats.stdev(), 100.0));
+            dev.calibration(DIJOFS_X, xStats.avg() - 100,
+                                      xStats.avg(),
+                                      xStats.avg() + 100);
+            dev.deadzone(DIJOFS_Y, std::min(4.0*yStats.stdev(), 100.0));
+            dev.calibration(DIJOFS_Y, yStats.avg() - 100,
+                                      yStats.avg(),
+                                      yStats.avg() + 100);
         }
+
         // Print stats
         std::wcout << std::setprecision(0) << std::fixed;
-        std::wcout << "\r    x: " << std::setw(6) << state.lX
+        std::wcout << "\r    x: " << std::setw(6) << x
                    << " " << std::setw(6) << xStats.avg()
                    << " " << std::setw(6) << xStats.stdev()
-                   << "    y: " << std::setw(6) << state.lY
+                   << "    y: " << std::setw(6) << y
                    << " " << std::setw(6) << yStats.avg()
                    << " " << std::setw(6) << yStats.stdev();
         // Pause 0.1s between samples
@@ -293,34 +223,5 @@ int main(int argc, char *argv[])
     std::wstring devGuid;
     devGuid.assign(arg.begin(), arg.end());
     calibrateDevice(devGuid);
-/*
-    // Retrieve calibration
-    DIPROPCAL dical;
-    dical.diph.dwSize = sizeof(dical);
-    dical.diph.dwHeaderSize = sizeof(dical.diph);
-    dical.diph.dwObj = DIJOFS_X;  // x-axis
-    dical.diph.dwHow = DIPH_BYOFFSET;
-    res = di8Dev->GetProperty(DIPROP_CALIBRATION, &dical.diph);
-    if (FAILED(res)) {
-        std::wcout << L"Failed getting calibration data " << res << std::endl;
-    } else {
-        std::wcout << "min: " << dical.lMin
-                   << "  center: " << dical.lCenter
-                   << "  max: " << dical.lMax
-                   << std::endl;
-    }
-
-    dipdw.diph.dwObj = DIJOFS_X;
-    dipdw.diph.dwHow = DIPH_BYOFFSET;
-    dipdw.dwData = 5000;
-    res = di8Dev->SetProperty(DIPROP_DEADZONE, &dipdw.diph);
-    if (FAILED(res)) fatalError(L"Failed setting deadzone", res);
-    //std::wcout << "deadzone: " << dipdw.dwData << std::endl;
-
-    sleep(10);
-
-    res = di8Dev->Unacquire();
-    if (FAILED(res)) fatalError(L"Failed unacquiring device", res);
-*/
     return 0;
 }

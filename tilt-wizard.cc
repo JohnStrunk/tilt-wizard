@@ -45,9 +45,6 @@
 #define _TEXTIFY1(x) #x
 #define TEXTIFY(x) _TEXTIFY1(x)
 
-HINSTANCE hInst = 0;
-LPDIRECTINPUT8 di8Interface = 0;
-
 static void
 fatalError(std::wstring message, HRESULT res) {
     _com_error e(res);
@@ -67,20 +64,32 @@ devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
     return DIENUM_CONTINUE;
 }
 
-static int
+static void
 enumerateDevices()
 {
+    // Initialize module handle instance
+    HINSTANCE hInst = GetModuleHandle(0);
+    if (!hInst) {
+        std::wcout << "Failed to get module handle" << std::endl;
+        abort();
+    }
+
+    // Initialize DirectInput
+    LPDIRECTINPUT8 di8Interface = 0;
+    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
+                                     IID_IDirectInput8, (LPVOID*)&di8Interface,
+                                     0);
+    if (FAILED(res)) fatalError(L"Failed to get interface to DirectInput", res);
+
     // Enumerate devices
     std::wcout << std::setw(42) << std::left << "Device GUID"
                << "Name" << std::endl;
     std::wcout << std::setw(70) << std::setfill(L'=') << "=" << std::endl;
     int dummy;
     //HRESULT res = di8Interface->EnumDevices(DI8DEVCLASS_ALL, devEnumCb,
-    HRESULT res = di8Interface->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb,
-                                            &dummy, DIEDFL_ATTACHEDONLY);
+    res = di8Interface->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb,
+                                    &dummy, DIEDFL_ATTACHEDONLY);
     if (FAILED(res)) fatalError(L"Error enumerating devices", res);
-
-    return res;
 }
 
 static void
@@ -183,22 +192,10 @@ int main(int argc, char *argv[])
 {
     printVersion();
 
-    // Initialize module handle instance
-    hInst = GetModuleHandle(0);
-    if (!hInst) {
-        std::wcout << "Failed to get module handle" << std::endl;
-        return 1;
-    }
-
-    // Initialize DirectInput
-    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
-                                     IID_IDirectInput8, (LPVOID*)&di8Interface,
-                                     0);
-    if (FAILED(res)) fatalError(L"Failed to get interface to DirectInput", res);
-
     // No arguments, so just enumerate the DirectInput devices we find.
     if (argc < 2) {
-        return enumerateDevices();
+        enumerateDevices();
+        return 0;
     }
 
     // Too many arguments

@@ -130,10 +130,10 @@ calibrateDevice(std::string guidString, int axisRange, double momentum)
     std::cout << std::right
               << std::setw(13) << "current"
               << std::setw(7) << "avg"
-              << std::setw(7) << "stdev"
+              << std::setw(7) << "DZ%"
               << std::setw(13) << "current"
               << std::setw(7) << "avg"
-              << std::setw(7) << "stdev"
+              << std::setw(7) << "DZ%"
               << std::endl;
 
     for (unsigned i=1; ;++i) {
@@ -148,13 +148,16 @@ calibrateDevice(std::string guidString, int axisRange, double momentum)
         if (abs(y - yStats.avg()) < std::max(2.0*yStats.stdev(), 10.0))
             yStats.insert(y);
 
+        double xDeadzone = std::min(4.0*xStats.stdev()*axisRange/100.0, 100.0);
+        double yDeadzone = std::min(4.0*yStats.stdev()*axisRange/100.0, 100.0);
+
         // Update calibration 1/sec
         if (i % 10 == 0) {
-            dev.deadzone(DIJOFS_X, std::min(4.0*xStats.stdev(), 100.0));
+            dev.deadzone(DIJOFS_X, xDeadzone);
             dev.calibration(DIJOFS_X, xStats.avg() - axisRange,
                                       xStats.avg(),
                                       xStats.avg() + axisRange);
-            dev.deadzone(DIJOFS_Y, std::min(4.0*yStats.stdev(), 100.0));
+            dev.deadzone(DIJOFS_Y, yDeadzone);
             dev.calibration(DIJOFS_Y, yStats.avg() - axisRange,
                                       yStats.avg(),
                                       yStats.avg() + axisRange);
@@ -164,10 +167,10 @@ calibrateDevice(std::string guidString, int axisRange, double momentum)
         std::cout << std::setprecision(0) << std::fixed;
         std::cout << "\r    x: " << std::setw(6) << x
                   << " " << std::setw(6) << xStats.avg()
-                  << " " << std::setw(6) << xStats.stdev()
+                  << " " << std::setw(6) << xDeadzone
                   << "    y: " << std::setw(6) << y
                   << " " << std::setw(6) << yStats.avg()
-                  << " " << std::setw(6) << yStats.stdev();
+                  << " " << std::setw(6) << yDeadzone;
         // Pause 0.1s between samples
         usleep(100000);
     }

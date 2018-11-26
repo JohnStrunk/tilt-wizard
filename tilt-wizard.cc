@@ -47,6 +47,7 @@
 #define TEXTIFY(x) _TEXTIFY1(x)
 
 static const int DEFAULT_RANGE = 100;
+static const double DEFAULT_MOMENTUM = 0.95;
 
 static void
 fatalError(std::string message, HRESULT res) {
@@ -99,7 +100,7 @@ enumerateDevices()
 }
 
 static void
-calibrateDevice(std::string guidString, int axisRange)
+calibrateDevice(std::string guidString, int axisRange, double momentum)
 {
     // Turn string into a GUID
     std::cout << "Looking for device: " << guidString << std::endl;
@@ -121,7 +122,7 @@ calibrateDevice(std::string guidString, int axisRange)
      * We take 10 samples/sec, and the new data has weight 1%, so each
      * second is ~10% of the statistic
      */
-    EMStat xStats(0.99), yStats(0.99);
+    EMStat xStats(momentum), yStats(momentum);
     dev.poll();
     xStats.set(dev.position(DIJOFS_X), 100*100);
     yStats.set(dev.position(DIJOFS_Y), 100*100);
@@ -187,6 +188,9 @@ usage(std::string pname)
               << std::endl
               << "  -l, --list                 list available devices"
               << std::endl
+              << "  -m, --momentum             EMA momentum (0 - 1.0)"
+              << " (default: " << DEFAULT_MOMENTUM << ")"
+              << std::endl
               << "  -r, --range                axis range, center to max"
               << " (default: " << DEFAULT_RANGE << ")"
               << std::endl;
@@ -210,15 +214,17 @@ int main(int argc, char *argv[])
 
     std::string devGuid;
     int range = DEFAULT_RANGE;
+    double momentum = DEFAULT_MOMENTUM;
     char opt;
     struct option longopts[] = {
         {"device", required_argument, 0, 'd'},
         {"help", no_argument, 0, 'h'},
         {"list", no_argument, 0, 'l'},
+        {"momentum", required_argument, 0, 'm'},
         {"range", required_argument, 0, 'r'},
         {0, 0, 0, 0}
     };
-    while ((opt = getopt_long(argc, argv, "d:hlr:", longopts, 0)) != -1) {
+    while ((opt = getopt_long(argc, argv, "d:hlm:r:", longopts, 0)) != -1) {
         switch (opt) {
         case 'd':
             devGuid = optarg;
@@ -231,6 +237,9 @@ int main(int argc, char *argv[])
             enumerateDevices();
             exit(EXIT_SUCCESS);
             break;
+        case 'm':
+            range = atof(optarg);
+            break;
         case 'r':
             range = atoi(optarg);
             break;
@@ -240,6 +249,12 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (momentum < 0 || 1.0 < momentum) {
+        std::cout << "Momentum must be in the range 0 - 1.0" << std::endl;
+        usage(argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
     if (range <= 0) {
         std::cout << "Axis range must be > 0" << std::endl;
         usage(argv[0]);
@@ -247,7 +262,7 @@ int main(int argc, char *argv[])
     }
 
     if (!devGuid.empty()) {
-        calibrateDevice(devGuid, range);
+        calibrateDevice(devGuid, range, momentum);
         return 0;
     } else {
         std::cout << "Must specify one of -d, -h or -l" << std::endl;

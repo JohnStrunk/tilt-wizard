@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
             exit(EXIT_SUCCESS);
             break;
         case 'm':
-            range = atof(optarg);
+            momentum = atof(optarg);
             break;
         case 'r':
             range = atoi(optarg);

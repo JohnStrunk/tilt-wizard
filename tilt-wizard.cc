@@ -148,8 +148,8 @@ calibrateDevice(std::string guidString, int axisRange, double momentum)
         if (abs(y - yStats.avg()) < std::max(2.0*yStats.stdev(), 10.0))
             yStats.insert(y);
 
-        double xDeadzone = std::min(4.0*xStats.stdev()*axisRange/100.0, 100.0);
-        double yDeadzone = std::min(4.0*yStats.stdev()*axisRange/100.0, 100.0);
+        double xDeadzone = std::min(4.0*xStats.stdev()*100.0/axisRange, 100.0);
+        double yDeadzone = std::min(4.0*yStats.stdev()*100.0/axisRange, 100.0);
 
         // Update calibration 1/sec
         if (i % 10 == 0) {

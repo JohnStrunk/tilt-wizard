@@ -16,10 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Docs: https://docs.microsoft.com/en-us/previous-versions/windows/desktop/ee417929(v%3dvs.85)
+
 #include "Device.h"
 #include <cassert>
 
-Device::Device(std::string guidString)
+Device::Device(std::string guidString, CalibrationMode mode)
 {
     IID guid;
     std::wstring wGuid;
@@ -27,16 +29,16 @@ Device::Device(std::string guidString)
     HRESULT res = IIDFromString(wGuid.c_str(), &guid);
     assert("Error parsing device GUID" && SUCCEEDED(res));
 
-    _init(&guid);
+    _init(&guid, mode);
 }
 
-Device::Device(IID *guid)
+Device::Device(IID *guid, CalibrationMode mode)
 {
-    _init(guid);
+    _init(guid, mode);
 }
 
 void
-Device::_init(IID *guid)
+Device::_init(IID *guid, CalibrationMode mode)
 {
     assert("GUID should not be null" && guid);
 
@@ -65,9 +67,13 @@ Device::_init(IID *guid)
     dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
     dipdw.diph.dwObj = 0;
     dipdw.diph.dwHow = DIPH_DEVICE;
-    dipdw.dwData = DIPROPCALIBRATIONMODE_RAW;
+    if (mode == RAW) {
+        dipdw.dwData = DIPROPCALIBRATIONMODE_RAW;
+    } else {
+        dipdw.dwData = DIPROPCALIBRATIONMODE_COOKED;
+    }
     res = _dev->SetProperty(DIPROP_CALIBRATIONMODE, &dipdw.diph);
-    assert("Failed setting raw data mode" && SUCCEEDED(res));
+    assert("Failed setting data mode" && SUCCEEDED(res));
 
     // Open the device so we can read
     res = _dev->Acquire();
@@ -183,4 +189,60 @@ Device::deadzone(WORD axisOffset, double pct)
     dipdw.dwData = (DWORD)(pct*100.0);
     HRESULT res = _dev->SetProperty(DIPROP_DEADZONE, &dipdw.diph);
     assert("Unable to set deadzone" && SUCCEEDED(res));
+}
+
+void
+Device::range(WORD axisOffset, LONG min, LONG max)
+{
+    assert(min <= max);
+    DIPROPRANGE r;
+    r.diph.dwSize = sizeof(r);
+    r.diph.dwHeaderSize = sizeof(r.diph);
+    r.diph.dwObj = axisOffset;
+    r.diph.dwHow = DIPH_BYOFFSET;
+    r.lMin = min;
+    r.lMax = max;
+    HRESULT res = _dev->SetProperty(DIPROP_RANGE, &r.diph);
+    assert("Unable to set axis range" && SUCCEEDED(res));
+}
+
+void
+Device::range(WORD axisOffset, LONG *min, LONG *max) const
+{
+    DIPROPRANGE r;
+    r.diph.dwSize = sizeof(r);
+    r.diph.dwHeaderSize = sizeof(r.diph);
+    r.diph.dwObj = axisOffset;
+    r.diph.dwHow = DIPH_BYOFFSET;
+    HRESULT res = _dev->GetProperty(DIPROP_RANGE, &r.diph);
+    assert("Unable to get axis range" && SUCCEEDED(res));
+    *min = r.lMin;
+    *max = r.lMax;
+}
+
+double
+Device::saturation(WORD axisOffset) const
+{
+    DIPROPDWORD dipdw;
+    dipdw.diph.dwSize = sizeof(dipdw);
+    dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
+    dipdw.diph.dwObj = axisOffset;
+    dipdw.diph.dwHow = DIPH_BYOFFSET;
+    HRESULT res = _dev->GetProperty(DIPROP_SATURATION, &dipdw.diph);
+    assert("Unable to get axis saturation" && SUCCEEDED(res));
+    return dipdw.dwData/100.0;
+}
+
+void
+Device::saturation(WORD axisOffset, double pct)
+{
+    assert(0.0 <= pct && pct <= 100.0);
+    DIPROPDWORD dipdw;
+    dipdw.diph.dwSize = sizeof(dipdw);
+    dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
+    dipdw.diph.dwObj = axisOffset;
+    dipdw.diph.dwHow = DIPH_BYOFFSET;
+    dipdw.dwData = (DWORD)(pct*100.0);
+    HRESULT res = _dev->SetProperty(DIPROP_SATURATION, &dipdw.diph);
+    assert("Unable to set axis saturation" && SUCCEEDED(res));
 }

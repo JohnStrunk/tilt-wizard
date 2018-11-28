@@ -25,20 +25,24 @@
 #include <dinput.h>
 
 class Device {
+public:
+    enum CalibrationMode { RAW, COOKED };
+
+private:
     /// Pointer to the underlying DirectInput device
     LPDIRECTINPUTDEVICE8 _dev;
     /// Most recently polled state
     DIJOYSTATE _state;
 
-    void _init(IID *guid);
+    void _init(IID *guid, CalibrationMode mode);
 
 public:
     /**
      * Create a new Device object from its GUID
      */
-    Device(IID *guid);
+    Device(IID *guid, CalibrationMode mode = RAW);
     /// Create a new Device object from its GUID passed as a string
-    Device(std::string guidString);
+    Device(std::string guidString, CalibrationMode mode = RAW);
     ~Device();
 
     /**
@@ -54,9 +58,13 @@ public:
 
     void calibration(WORD axisOffset, LONG *min, LONG *center, LONG *max) const;
     void calibration(WORD axisOffset, LONG min, LONG center, LONG max);
-    LONG position(WORD axisOffset) const;
     double deadzone(WORD axisOffset) const;
     void deadzone(WORD axisOffset, double pct);
+    LONG position(WORD axisOffset) const;
+    void range(WORD axisOffset, LONG min, LONG max);
+    void range(WORD axisOffset, LONG *min, LONG *max) const;
+    double saturation(WORD axisOffset) const;
+    void saturation(WORD axisOffset, double pct);
 };
 
  #endif // DEVICE_H

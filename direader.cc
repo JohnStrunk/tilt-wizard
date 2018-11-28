@@ -19,15 +19,82 @@
 #include <iostream>
 #include <string>
 #include <getopt.h>
+#include <iomanip>
 #include <unistd.h>
+
+#include "Device.h"
 
 #define _TEXTIFY1(x) #x
 #define TEXTIFY(x) _TEXTIFY1(x)
 
 void
-readDevice(std::string devGuid)
+readDevice(std::string guidString)
 {
-    /* code */
+    std::cout << "Looking for device: " << guidString << std::endl;
+    Device dev(guidString);
+    Device cooked(guidString, Device::COOKED);
+    std::cout << "Device name: " << dev.name() << std::endl;
+
+    unsigned fwidth = 6;
+    std::cout << std::right
+              << std::setw(2*fwidth) << "cooked"
+              << std::setw(fwidth) << "raw"
+              << std::setw(fwidth) << "rmin"
+              << std::setw(fwidth) << "min"
+              << std::setw(fwidth) << "ctr"
+              << std::setw(fwidth) << "max"
+              << std::setw(fwidth) << "rmax"
+              << std::setw(fwidth) << "DZ%"
+              << std::setw(fwidth) << "SAT%"
+              << std::setw(2*fwidth) << "cooked"
+              << std::setw(fwidth) << "raw"
+              << std::setw(fwidth) << "rmin"
+              << std::setw(fwidth) << "min"
+              << std::setw(fwidth) << "ctr"
+              << std::setw(fwidth) << "max"
+              << std::setw(fwidth) << "rmax"
+              << std::setw(fwidth) << "DZ%"
+              << std::setw(fwidth) << "SAT%"
+              << std::endl;
+
+    while (true) {
+        dev.poll();
+        cooked.poll();
+
+        LONG xMin, xCtr, xMax;
+        dev.calibration(DIJOFS_X, &xMin, &xCtr, &xMax);
+        LONG xrMin, xrMax;
+        dev.range(DIJOFS_X, &xrMin, &xrMax);
+
+        LONG yMin, yCtr, yMax;
+        dev.calibration(DIJOFS_Y, &yMin, &yCtr, &yMax);
+        LONG yrMin, yrMax;
+        dev.range(DIJOFS_Y, &yrMin, &yrMax);
+
+        std::cout << std::setprecision(0) << std::fixed;
+        std::cout << std::setw(fwidth) << "x: "
+                  << std::setw(fwidth) << cooked.position(DIJOFS_X)
+                  << std::setw(fwidth) << dev.position(DIJOFS_X)
+                  << std::setw(fwidth) << xrMin
+                  << std::setw(fwidth) << xMin
+                  << std::setw(fwidth) << xCtr
+                  << std::setw(fwidth) << xMax
+                  << std::setw(fwidth) << xrMax
+                  << std::setw(fwidth) << dev.deadzone(DIJOFS_X)
+                  << std::setw(fwidth) << dev.saturation(DIJOFS_X)
+                  << std::setw(fwidth) << "y: "
+                  << std::setw(fwidth) << cooked.position(DIJOFS_Y)
+                  << std::setw(fwidth) << dev.position(DIJOFS_Y)
+                  << std::setw(fwidth) << yrMin
+                  << std::setw(fwidth) << yMin
+                  << std::setw(fwidth) << yCtr
+                  << std::setw(fwidth) << yMax
+                  << std::setw(fwidth) << yrMax
+                  << std::setw(fwidth) << dev.deadzone(DIJOFS_Y)
+                  << std::setw(fwidth) << dev.saturation(DIJOFS_Y)
+                  << "\r";
+        usleep(100000);
+    }
 }
 
 

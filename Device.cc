@@ -166,7 +166,7 @@ Device::deadzone(WORD axisOffset) const
     dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
     dipdw.diph.dwObj = axisOffset;
     dipdw.diph.dwHow = DIPH_BYOFFSET;
-    HRESULT res = _dev->SetProperty(DIPROP_DEADZONE, &dipdw.diph);
+    HRESULT res = _dev->GetProperty(DIPROP_DEADZONE, &dipdw.diph);
     assert("Unable to get deadzone" && SUCCEEDED(res));
     return dipdw.dwData/100.0;
 }

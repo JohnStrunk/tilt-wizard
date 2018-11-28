@@ -5,6 +5,7 @@
 - Added
   - Axis range can be customized via `-r range`.
   - Moving average momentum can be customized via `-m value`.
+  - `direader.exe` to help diagnose add debug DirectInput settings
 - Changed
   - Command line has changed to use switches. (`-l` to list devices and `-d
     guid` to tune a particular device).

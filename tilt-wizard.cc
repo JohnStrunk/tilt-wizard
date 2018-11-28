@@ -102,15 +102,8 @@ enumerateDevices()
 static void
 calibrateDevice(std::string guidString, int axisRange, double momentum)
 {
-    // Turn string into a GUID
     std::cout << "Looking for device: " << guidString << std::endl;
-    IID guid;
-    std::wstring wGuid;
-    wGuid.assign(guidString.begin(), guidString.end());
-    HRESULT res = IIDFromString(wGuid.c_str(), &guid);
-    if (FAILED(res)) fatalError("Error parsing device GUID", res);
-
-    Device dev(&guid);
+    Device dev(guidString);
     std::cout << "Device name: " << dev.name() << std::endl;
 
     // Grab values once to initialize the stats

@@ -21,6 +21,7 @@
 
 #include <string>
 
+#define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
 class Device {
@@ -29,12 +30,15 @@ class Device {
     /// Most recently polled state
     DIJOYSTATE _state;
 
+    void _init(IID *guid);
 
 public:
     /**
      * Create a new Device object from its GUID
      */
     Device(IID *guid);
+    /// Create a new Device object from its GUID passed as a string
+    Device(std::string guidString);
     ~Device();
 
     /**

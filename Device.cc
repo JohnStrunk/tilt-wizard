@@ -16,10 +16,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- #include "Device.h"
- #include <cassert>
+#include "Device.h"
+#include <cassert>
+
+Device::Device(std::string guidString)
+{
+    IID guid;
+    std::wstring wGuid;
+    wGuid.assign(guidString.begin(), guidString.end());
+    HRESULT res = IIDFromString(wGuid.c_str(), &guid);
+    assert("Error parsing device GUID" && SUCCEEDED(res));
+
+    _init(&guid);
+}
 
 Device::Device(IID *guid)
+{
+    _init(guid);
+}
+
+void
+Device::_init(IID *guid)
 {
     assert("GUID should not be null" && guid);
 

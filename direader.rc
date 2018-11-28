@@ -28,10 +28,10 @@
         BLOCK "StringFileInfo" {
             // US-English language block (0409) in Unicode (04b0)
             BLOCK "040904b0" {
-                VALUE "ProductName", "tilt-wizard\0"
-                VALUE "OriginalFilename", "tilt-wizard.exe\0"
+                VALUE "ProductName", "direader\0"
+                VALUE "OriginalFilename", "direader.exe\0"
                 VALUE "ProductVersion", TEXTIFY(GIT_VERSION) ## "\0"
-                VALUE "FileDescription", "Automatically calibrates gamepad accelerometer\0"
+                VALUE "FileDescription", "Displays values of DirectInput joysticks\0"
                 VALUE "LegalCopyright", "Copyright (c) 2018 John D. Strunk\0"
                 VALUE "LegalTrademarks", "Licensed under GNU Affero General Public License v3 or later\0"
                 VALUE "CompanyName", "https://github.com/JohnStrunk/tilt-wizard\0"

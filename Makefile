@@ -17,7 +17,7 @@ CCFLAGS:= -Wall -Werror -ggdb -D_FORTIFY_SOURCE=2 -D_GLIBCXX_ASSERTIONS \
 DEFINES:= "-DGIT_VERSION=$(GIT_VERSION)" "-DGIT_DATE=$(GIT_DATE)"
 
 DRSOURCES:= Device.cc direader.cc
-DRRESOURCES:=
+DRRESOURCES:= direader.rc
 DROBJECTS:= $(DRSOURCES:.cc=.o) $(DRRESOURCES:.rc=-rc.o)
 
 TWSOURCES:= Device.cc EMStat.cc tilt-wizard.cc

@@ -19,7 +19,7 @@
 // Docs: https://docs.microsoft.com/en-us/previous-versions/windows/desktop/ee417929(v%3dvs.85)
 
 #include "Device.h"
-#include <cassert>
+#include "TWError.h"
 
 Device::Device(std::string guidString, CalibrationMode mode)
 {
@@ -27,7 +27,7 @@ Device::Device(std::string guidString, CalibrationMode mode)
     std::wstring wGuid;
     wGuid.assign(guidString.begin(), guidString.end());
     HRESULT res = IIDFromString(wGuid.c_str(), &guid);
-    assert("Error parsing device GUID" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Error parsing device GUID", res);
 
     _init(&guid, mode);
 }
@@ -40,27 +40,27 @@ Device::Device(IID *guid, CalibrationMode mode)
 void
 Device::_init(IID *guid, CalibrationMode mode)
 {
-    assert("GUID should not be null" && guid);
+    if (!guid) throw TWError("GUID should not be null");
 
     HINSTANCE hInst = GetModuleHandle(0);
-    assert("Unable to get module handle" && hInst);
+    if (!hInst) throw TWError("Unable to get module handle");
 
     LPDIRECTINPUT8 di8Int = 0;
     HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
                                      IID_IDirectInput8, (LPVOID*)&di8Int,
                                      0);
-    assert("Failed to get interface to DirectInput" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Failed to get interface to DirectInput", res);
 
     res = di8Int->CreateDevice(*guid, &_dev, 0);
-    assert("Unable to get handle for device" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to get handle for device", res);
 
     di8Int->Release();
 
     // Configure the device
     res = _dev->SetCooperativeLevel(0, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);
-    assert("Failed setting device cooperation level" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Failed setting device cooperation level", res);
     res = _dev->SetDataFormat(&c_dfDIJoystick);
-    assert("Failed setting data format" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Failed setting data format", res);
     // Set to retrieve RAW data from device
     DIPROPDWORD dipdw;
     dipdw.diph.dwSize = sizeof(dipdw);
@@ -73,11 +73,11 @@ Device::_init(IID *guid, CalibrationMode mode)
         dipdw.dwData = DIPROPCALIBRATIONMODE_COOKED;
     }
     res = _dev->SetProperty(DIPROP_CALIBRATIONMODE, &dipdw.diph);
-    assert("Failed setting data mode" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Failed setting calibration mode", res);
 
     // Open the device so we can read
     res = _dev->Acquire();
-    assert("Failed acquiring device" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Failed acquiring device", res);
 }
 
 Device::~Device()
@@ -92,7 +92,7 @@ Device::name() const
     DIDEVICEINSTANCE di;
     di.dwSize = sizeof(di);
     HRESULT res = _dev->GetDeviceInfo(&di);
-    assert("Failed getting device info" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Failed getting device info", res);
     std::string name(di.tszInstanceName);
     return name;
 }
@@ -101,9 +101,9 @@ void
 Device::poll()
 {
     HRESULT res = _dev->Poll();
-    assert("Failed polling device" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Failed polling device", res);
     res = _dev->GetDeviceState(sizeof(_state), &_state);
-    assert("Failed getting current device position" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Failed getting current device position", res);
 }
 
 void
@@ -115,7 +115,7 @@ Device::calibration(WORD axisOffset, LONG *min, LONG *center, LONG *max) const
     dical.diph.dwObj = axisOffset;
     dical.diph.dwHow = DIPH_BYOFFSET;
     HRESULT res = _dev->GetProperty(DIPROP_CALIBRATION, &dical.diph);
-    assert("Unable to get calibration" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to get calibration", res);
     *min = dical.lMin;
     *center = dical.lCenter;
     *max = dical.lMax;
@@ -133,7 +133,7 @@ Device::calibration(WORD axisOffset, LONG min, LONG center, LONG max)
     dical.lCenter = center;
     dical.lMax = max;
     HRESULT res = _dev->SetProperty(DIPROP_CALIBRATION, &dical.diph);
-    assert("Unable to set calibration" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to set calibration", res);
 
 /*
     LPDIRECTINPUTJOYCONFIG idijc = 0;
@@ -157,7 +157,7 @@ Device::position(WORD axisOffset) const
     case DIJOFS_Y:
         return _state.lY;
     default:
-        assert("Unsupported axis" && 0);
+        throw TWError("Unsupported axis");
     }
 
     // not reached
@@ -173,14 +173,15 @@ Device::deadzone(WORD axisOffset) const
     dipdw.diph.dwObj = axisOffset;
     dipdw.diph.dwHow = DIPH_BYOFFSET;
     HRESULT res = _dev->GetProperty(DIPROP_DEADZONE, &dipdw.diph);
-    assert("Unable to get deadzone" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to get deadzone", res);
     return dipdw.dwData/100.0;
 }
 
 void
 Device::deadzone(WORD axisOffset, double pct)
 {
-    assert(0.0 <= pct && pct <= 100.0);
+    if (0.0 > pct || pct > 100.0)
+        throw TWError("Deadzone must be between 0 and 100");
     DIPROPDWORD dipdw;
     dipdw.diph.dwSize = sizeof(dipdw);
     dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
@@ -188,13 +189,13 @@ Device::deadzone(WORD axisOffset, double pct)
     dipdw.diph.dwHow = DIPH_BYOFFSET;
     dipdw.dwData = (DWORD)(pct*100.0);
     HRESULT res = _dev->SetProperty(DIPROP_DEADZONE, &dipdw.diph);
-    assert("Unable to set deadzone" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to set deadzone", res);
 }
 
 void
 Device::range(WORD axisOffset, LONG min, LONG max)
 {
-    assert(min <= max);
+    if (min > max) throw TWError("min must be <= max");
     DIPROPRANGE r;
     r.diph.dwSize = sizeof(r);
     r.diph.dwHeaderSize = sizeof(r.diph);
@@ -203,7 +204,7 @@ Device::range(WORD axisOffset, LONG min, LONG max)
     r.lMin = min;
     r.lMax = max;
     HRESULT res = _dev->SetProperty(DIPROP_RANGE, &r.diph);
-    assert("Unable to set axis range" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to set axis range", res);
 }
 
 void
@@ -215,7 +216,7 @@ Device::range(WORD axisOffset, LONG *min, LONG *max) const
     r.diph.dwObj = axisOffset;
     r.diph.dwHow = DIPH_BYOFFSET;
     HRESULT res = _dev->GetProperty(DIPROP_RANGE, &r.diph);
-    assert("Unable to get axis range" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to get axis range", res);
     *min = r.lMin;
     *max = r.lMax;
 }
@@ -229,14 +230,15 @@ Device::saturation(WORD axisOffset) const
     dipdw.diph.dwObj = axisOffset;
     dipdw.diph.dwHow = DIPH_BYOFFSET;
     HRESULT res = _dev->GetProperty(DIPROP_SATURATION, &dipdw.diph);
-    assert("Unable to get axis saturation" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to get axis saturation", res);
     return dipdw.dwData/100.0;
 }
 
 void
 Device::saturation(WORD axisOffset, double pct)
 {
-    assert(0.0 <= pct && pct <= 100.0);
+    if (0.0 > pct || pct > 100.0)
+        throw TWError("Saturation must be between 0 and 100");
     DIPROPDWORD dipdw;
     dipdw.diph.dwSize = sizeof(dipdw);
     dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
@@ -244,5 +246,5 @@ Device::saturation(WORD axisOffset, double pct)
     dipdw.diph.dwHow = DIPH_BYOFFSET;
     dipdw.dwData = (DWORD)(pct*100.0);
     HRESULT res = _dev->SetProperty(DIPROP_SATURATION, &dipdw.diph);
-    assert("Unable to set axis saturation" && SUCCEEDED(res));
+    if (FAILED(res)) throw TWError("Unable to set axis saturation", res);
 }

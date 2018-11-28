@@ -17,7 +17,6 @@
  */
 
 #include <algorithm>
-#include <cassert>
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
@@ -34,6 +33,7 @@
 
 #include "Device.h"
 #include "EMStat.h"
+#include "TWError.h"
 
 #ifndef GIT_VERSION
 #define GIT_VERSION (unknown)
@@ -49,21 +49,13 @@
 static const int DEFAULT_RANGE = 100;
 static const double DEFAULT_MOMENTUM = 0.95;
 
-static void
-fatalError(std::string message, HRESULT res) {
-    _com_error e(res);
-    std::cout << message << ": " << e.ErrorMessage()
-              << " (" << res << ")" << std::endl;
-    abort();
-}
-
-
 BOOL
 devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
 {
     const unsigned G_LEN = 100;
     wchar_t guid[G_LEN];
-    assert(0 != StringFromGUID2(lpddi->guidInstance, guid, G_LEN));
+    if (0 == StringFromGUID2(lpddi->guidInstance, guid, G_LEN))
+        throw TWError("Unable to convert GUID to string");
     std::wstring wgstring(guid);
     std::string gstring;
     gstring.assign(wgstring.begin(), wgstring.end());
@@ -86,7 +78,7 @@ enumerateDevices()
     HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
                                      IID_IDirectInput8, (LPVOID*)&di8Interface,
                                      0);
-    if (FAILED(res)) fatalError("Failed to get interface to DirectInput", res);
+    if (FAILED(res)) throw TWError("Failed to get interface to DirectInput", res);
 
     // Enumerate devices
     std::cout << std::setw(42) << std::left << "Device GUID"
@@ -96,7 +88,7 @@ enumerateDevices()
     //HRESULT res = di8Interface->EnumDevices(DI8DEVCLASS_ALL, devEnumCb,
     res = di8Interface->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb,
                                     &dummy, DIEDFL_ATTACHEDONLY);
-    if (FAILED(res)) fatalError("Error enumerating devices", res);
+    if (FAILED(res)) throw TWError("Error enumerating devices", res);
 }
 
 static void

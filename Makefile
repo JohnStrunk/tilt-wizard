@@ -16,17 +16,24 @@ CCFLAGS:= -Wall -Werror -ggdb -D_FORTIFY_SOURCE=2 -D_GLIBCXX_ASSERTIONS \
           -O2 -pipe
 DEFINES:= "-DGIT_VERSION=$(GIT_VERSION)" "-DGIT_DATE=$(GIT_DATE)"
 
-SOURCES:= Device.cc EMStat.cc tilt-wizard.cc
-RESOURCES:= tilt-wizard.rc
-OBJECTS:= $(SOURCES:.cc=.o) $(RESOURCES:.rc=-rc.o)
+DRSOURCES:= Device.cc direader.cc
+DRRESOURCES:=
+DROBJECTS:= $(DRSOURCES:.cc=.o) $(DRRESOURCES:.rc=-rc.o)
+
+TWSOURCES:= Device.cc EMStat.cc tilt-wizard.cc
+TWRESOURCES:= tilt-wizard.rc
+TWOBJECTS:= $(TWSOURCES:.cc=.o) $(TWRESOURCES:.rc=-rc.o)
 LIBS:= -ldinput8 -ldxguid -lole32
 
 
 .PHONY: all clean doc release
 
-all: tilt-wizard.exe
+all: tilt-wizard.exe direader.exe
 
-tilt-wizard.exe: $(OBJECTS)
+tilt-wizard.exe: $(TWOBJECTS)
+	g++ -static -o $@ $(CCFLAGS) $^ -mconsole $(LIBS)
+
+direader.exe: $(DROBJECTS)
 	g++ -static -o $@ $(CCFLAGS) $^ -mconsole $(LIBS)
 
 %.asc: %
@@ -40,7 +47,8 @@ tilt-wizard.exe: $(OBJECTS)
 	windres "-DGIT_VERSION=\"$(GIT_VERSION)\"" $< $@
 
 clean:
-	-del $(OBJECTS) tilt-wizard.exe tilt-wizard.exe.asc
+	-del $(TWOBJECTS) tilt-wizard.exe tilt-wizard.exe.asc
+	-del $(DROBJECTS) direader.exe direader.exe.asc
 	-rmdir /s /q "docs\html"
 
 doc:
@@ -48,5 +56,6 @@ doc:
 
 release:
 	$(MAKE) clean
-	$(MAKE) tilt-wizard.exe tilt-wizard.exe.asc
+	$(MAKE) tilt-wizard.exe tilt-wizard.exe.asc direader.exe direader.exe.asc
 	$(GPG) --verify tilt-wizard.exe.asc
+	$(GPG) --verify direader.exe.asc

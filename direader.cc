@@ -27,6 +27,21 @@
 #define _TEXTIFY1(x) #x
 #define TEXTIFY(x) _TEXTIFY1(x)
 
+static void
+enumerateDevices()
+{
+    Device::DescriptionList devs = Device::enumerateDevices();
+
+    std::cout << std::setw(42) << std::left << "Device GUID"
+               << "Name" << std::endl;
+    std::cout << std::setw(70) << std::setfill('=') << "=" << std::endl;
+
+    for (Device::DescriptionList::const_iterator i = devs.begin();
+         i != devs.end(); ++i) {
+        std::cout << i->guidString << "    " << i->deviceName << std::endl;
+    }
+}
+
 void
 readDevice(std::string guidString)
 {
@@ -103,11 +118,14 @@ usage(std::string pname)
 {
     std::cout << std::endl << "Usage:" << std::endl
               << "  " << pname.c_str() << " -h|--help" << std::endl
+              << "  " << pname.c_str() << " -l|--list" << std::endl
               << "  " << pname.c_str() << " -d|--device device_guid" << std::endl
               << std::endl
               << "  -d, --device device_uuid   read from specified device"
               << std::endl
               << "  -h, --help                 this help message"
+              << std::endl
+              << "  -l, --list                 list available devices"
               << std::endl;
 }
 
@@ -131,16 +149,21 @@ usage(std::string pname)
      char opt;
      struct option longopts[] = {
          {"device", required_argument, 0, 'd'},
+         {"list", no_argument, 0, 'l'},
          {"help", no_argument, 0, 'h'},
          {0, 0, 0, 0}
      };
-     while ((opt = getopt_long(argc, argv, "d:h", longopts, 0)) != -1) {
+     while ((opt = getopt_long(argc, argv, "d:hl", longopts, 0)) != -1) {
          switch (opt) {
          case 'd':
              devGuid = optarg;
              break;
          case 'h':
              usage(argv[0]);
+             exit(EXIT_SUCCESS);
+             break;
+         case 'l':
+             enumerateDevices();
              exit(EXIT_SUCCESS);
              break;
          default: /* '?' */

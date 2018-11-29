@@ -24,10 +24,13 @@
 
 class TWError : public std::runtime_error {
 public:
+    HRESULT error;
+
     TWError(const std::string &msg, HRESULT err) :
-        std::runtime_error(msg + ": " + _com_error(err).ErrorMessage()) { }
+        std::runtime_error(msg + ": " + _com_error(err).ErrorMessage()),
+        error(err) { }
     TWError(const std::string &msg) :
-        std::runtime_error(msg) { }
+        std::runtime_error(msg), error(E_FAIL) { }
 };
 
  #endif // TWERROR_H

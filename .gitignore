@@ -1,3 +1,4 @@
+*.d
 *.o
 docs/html/
 *.exe

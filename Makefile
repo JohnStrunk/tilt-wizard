@@ -41,14 +41,14 @@ direader.exe: $(DROBJECTS)
 	$(GPG) --detach-sign --armor --local-user $(SIGNING_KEY) $<
 
 %.o: %.cc Makefile
-	g++ $(CCFLAGS) $(DEFINES) -c $<
+	g++ $(CCFLAGS) $(DEFINES) -MMD -c $<
 
 %-rc.o: %.rc Makefile
 	windres "-DGIT_VERSION=\"$(GIT_VERSION)\"" $< $@
 
 clean:
-	-del $(TWOBJECTS) tilt-wizard.exe tilt-wizard.exe.asc
-	-del $(DROBJECTS) direader.exe direader.exe.asc
+	-del $(TWOBJECTS) $(TWSOURCES:.cc=.d) tilt-wizard.exe tilt-wizard.exe.asc
+	-del $(DROBJECTS) $(DRSOURCES:.cc=.d) direader.exe direader.exe.asc
 	-rmdir /s /q "docs\html"
 
 doc:
@@ -59,3 +59,5 @@ release:
 	$(MAKE) tilt-wizard.exe tilt-wizard.exe.asc direader.exe direader.exe.asc
 	$(GPG) --verify tilt-wizard.exe.asc
 	$(GPG) --verify direader.exe.asc
+
+include $(wildcard *.d)

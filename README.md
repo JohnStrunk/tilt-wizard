@@ -26,17 +26,18 @@ calibrates the center, limits, and deadzone on-the-fly.
 Download the latest version from the [Releases
 page](https://github.com/JohnStrunk/tilt-wizard/releases).
 
-Run `tilt-wizard` with no arguments to scan for available DirectInput devices:
+Run `tilt-wizard -l` with no arguments to list available DirectInput devices:
 
 ```
-C:\tilt-wizard>tilt-wizard.exe
+C:\tilt-wizard>tilt-wizard.exe -l
 ```
 
 This should discover any devices attached to your computer. To have tilt-wizard
-automatically tune the device, pass in the GUID of the desired device:
+automatically tune the device, pass in the GUID of the desired device via the
+`-d` option:
 
 ```
-C:\tilt-wizard>tilt-wizard.exe {34BE2320-42C7-11E6-8001-444553540000}
+C:\tilt-wizard>tilt-wizard.exe -d {34BE2320-42C7-11E6-8001-444553540000}
 ```
 
 The application will then run, sampling the X & Y axes and updating the center
@@ -44,12 +45,12 @@ point.
 
 - `current`: The most recent sample
 - `avg`: The currently calculated average (and center point)
-- `stdev`: The calculated standard deviation of the incoming data. You probably
-  want to manually set the deadzone percentage to approximately 4x this value.
+- `DZ%`: The recommended deadzone percentage for this axis. It is calculated
+  based on the standard deviation of the incoming data.
 
 Example:
 
-![Example output fo tilt-wizard](docs/images/output.png)
+![Example output for tilt-wizard](docs/images/output.png)
 
 To integrate tilt-wizard with your pinball cabinet, see the [installation
 document](docs/installation.md).
@@ -67,7 +68,8 @@ C:\>choco install mingw
 ...
 ```
 
-Once you have the prerequisites installed, make sure you update your PATH. In my case, that was:
+Once you have the prerequisites installed, make sure you update your PATH. In my
+case, that was:
 
 ```
 set PATH=%PATH%;C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin

@@ -49,46 +49,19 @@
 static const int DEFAULT_RANGE = 100;
 static const double DEFAULT_MOMENTUM = 0.95;
 
-BOOL
-devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
-{
-    const unsigned G_LEN = 100;
-    wchar_t guid[G_LEN];
-    if (0 == StringFromGUID2(lpddi->guidInstance, guid, G_LEN))
-        throw TWError("Unable to convert GUID to string");
-    std::wstring wgstring(guid);
-    std::string gstring;
-    gstring.assign(wgstring.begin(), wgstring.end());
-    std::cout << gstring << "    " << lpddi->tszInstanceName << std::endl;
-    return DIENUM_CONTINUE;
-}
-
 static void
 enumerateDevices()
 {
-    // Initialize module handle instance
-    HINSTANCE hInst = GetModuleHandle(0);
-    if (!hInst) {
-        std::cout << "Failed to get module handle" << std::endl;
-        abort();
-    }
+    Device::DescriptionList devs = Device::enumerateDevices();
 
-    // Initialize DirectInput
-    LPDIRECTINPUT8 di8Interface = 0;
-    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
-                                     IID_IDirectInput8, (LPVOID*)&di8Interface,
-                                     0);
-    if (FAILED(res)) throw TWError("Failed to get interface to DirectInput", res);
-
-    // Enumerate devices
     std::cout << std::setw(42) << std::left << "Device GUID"
                << "Name" << std::endl;
     std::cout << std::setw(70) << std::setfill('=') << "=" << std::endl;
-    int dummy;
-    //HRESULT res = di8Interface->EnumDevices(DI8DEVCLASS_ALL, devEnumCb,
-    res = di8Interface->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb,
-                                    &dummy, DIEDFL_ATTACHEDONLY);
-    if (FAILED(res)) throw TWError("Error enumerating devices", res);
+
+    for (Device::DescriptionList::const_iterator i = devs.begin();
+         i != devs.end(); ++i) {
+        std::cout << i->guidString << "    " << i->deviceName << std::endl;
+    }
 }
 
 static void

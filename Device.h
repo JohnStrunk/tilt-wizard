@@ -19,6 +19,7 @@
  #ifndef DEVICE_H
  #define DEVICE_H
 
+#include <list>
 #include <string>
 
 #define DIRECTINPUT_VERSION 0x0800
@@ -44,6 +45,16 @@ public:
     /// Create a new Device object from its GUID passed as a string
     Device(std::string guidString, CalibrationMode mode = RAW);
     ~Device();
+
+    struct DeviceDescription {
+        std::string deviceName;
+        std::string guidString;
+        IID guid;
+    };
+
+    typedef std::list<DeviceDescription> DescriptionList;
+
+    static DescriptionList enumerateDevices();
 
     /**
      * Get the instance name for the device

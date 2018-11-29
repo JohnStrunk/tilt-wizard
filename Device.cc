@@ -21,6 +21,47 @@
 #include "Device.h"
 #include "TWError.h"
 
+BOOL
+devEnumCb(LPCDIDEVICEINSTANCE lpddi, LPVOID voidDev)
+{
+    Device::DescriptionList *devices =
+        reinterpret_cast<Device::DescriptionList*>(voidDev);
+    const unsigned G_LEN = 100;
+    wchar_t guid[G_LEN];
+    if (0 == StringFromGUID2(lpddi->guidInstance, guid, G_LEN))
+        throw TWError("Unable to convert GUID to string");
+    std::wstring wgstring(guid);
+    Device::DeviceDescription desc;
+    desc.deviceName = lpddi->tszInstanceName;
+    desc.guidString.assign(wgstring.begin(), wgstring.end());
+    memcpy(&desc.guid, &lpddi->guidInstance, sizeof(desc.guid));
+    devices->push_back(desc);
+    return DIENUM_CONTINUE;
+}
+
+Device::DescriptionList
+Device::enumerateDevices()
+{
+    // Initialize module handle instance
+    HINSTANCE hInst = GetModuleHandle(0);
+    if (!hInst) throw TWError("Failed to get module handle");
+
+    // Initialize DirectInput
+    LPDIRECTINPUT8 di8Interface = 0;
+    HRESULT res = DirectInput8Create(hInst, DIRECTINPUT_VERSION,
+                                     IID_IDirectInput8, (LPVOID*)&di8Interface,
+                                     0);
+    if (FAILED(res)) throw TWError("Failed to get interface to DirectInput", res);
+
+    DescriptionList devices;
+    res = di8Interface->EnumDevices(DI8DEVCLASS_GAMECTRL, devEnumCb,
+                                    &devices, DIEDFL_ATTACHEDONLY);
+    if (FAILED(res)) throw TWError("Error enumerating devices", res);
+
+    return devices;
+}
+
+
 Device::Device(std::string guidString, CalibrationMode mode)
 {
     IID guid;

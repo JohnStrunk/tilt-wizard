@@ -24,6 +24,7 @@
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
+#include "dinputd.h"
 
 class Device {
 public:
@@ -32,6 +33,9 @@ public:
 private:
     /// Pointer to the underlying DirectInput device
     LPDIRECTINPUTDEVICE8 _dev;
+    LPDIJOYCONFIG _jc;
+    LPDIRECTINPUTJOYCONFIG _dijc;
+    LPDIRECTINPUTJOYCONFIG8 _dijc8;
     /// Most recently polled state
     DIJOYSTATE _state;
 

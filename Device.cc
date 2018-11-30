@@ -92,6 +92,15 @@ Device::_init(IID *guid, CalibrationMode mode)
                                      0);
     if (FAILED(res)) throw TWError("Failed to get interface to DirectInput", res);
 
+    res = di8Int->QueryInterface(IID_IDirectInputJoyConfig8, (LPVOID*)&_dijc8);
+    if (FAILED(res)) throw TWError("Failed to get JoyConfig8", res);
+    res = _dijc8->SetCooperativeLevel(GetConsoleWindow(), DISCL_BACKGROUND | DISCL_EXCLUSIVE);
+    if (FAILED(res)) throw TWError("SetCooperativeLevel", res);
+    res = _dijc8->Acquire();
+    if (FAILED(res)) throw TWError("Acquire", res);
+    res = _dijc8->SendNotify();
+    if (FAILED(res)) throw TWError("SendNotify", res);
+
     res = di8Int->CreateDevice(*guid, &_dev, 0);
     if (FAILED(res)) throw TWError("Unable to get handle for device", res);
 

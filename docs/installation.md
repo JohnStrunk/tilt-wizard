@@ -25,6 +25,11 @@ of `tilt-wizard.exe` for the "Working path" and in the "Parameters" field, put
 
 ![PinballX startup settings](images/pinballx_config.png)
 
+**Caution:** At exit, PinballX will leave tilt-wizard running in the background.
+Repeatedly starting and stopping PinballX can cause several copies of
+tilt-wizard to be running simultaneously. Good practice would be to terminate
+all instances using the Task Manager if you exit PinballX.
+
 ## Run on startup
 
 Tilt-wizard can also be configured to run at startup by creating a shortcut and
